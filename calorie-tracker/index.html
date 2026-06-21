@@ -1,0 +1,857 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NutriFlow — Smart Calorie Tracker</title>
+  <link rel="stylesheet" href="theme-blueprint.css" />
+  <link rel="stylesheet" href="styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+<a href="#main-content" class="skip-link">Skip to main content</a>
+
+<!-- Loading Screen -->
+<div class="loading-screen" id="loadingScreen">
+  <div class="loading-content">
+    <div class="loading-logo">
+      <div class="logo-orbit"><div class="orbit-dot"></div></div>
+      <span class="logo-text">NutriFlow</span>
+    </div>
+    <div class="loading-tagline">Your smart nutrition companion</div>
+    <div class="loading-bar-wrap"><div class="loading-bar" id="loadingBar"></div></div>
+  </div>
+</div>
+
+<!-- Profile Picker (shown after loading, before app) -->
+<div id="profilePicker" style="display:none">
+  <div class="pp-container">
+    <div class="pp-logo"><span>🌊</span> NutriFlow</div>
+    <h2 class="pp-title">Who's tracking today?</h2>
+    <div class="pp-grid" id="ppGrid"></div>
+    <button class="btn-secondary pp-add-btn" id="ppAddBtn">＋ Add Profile</button>
+    <div class="pp-new-form hidden" id="ppNewForm">
+      <input type="text" id="ppName" placeholder="Your name" maxlength="50" autocomplete="name"/>
+      <input type="email" id="ppEmail" placeholder="Email (optional)" autocomplete="email"/>
+      <div class="pp-form-btns">
+        <button class="btn-primary" id="ppCreateBtn">Create Profile</button>
+        <button class="btn-text" id="ppCancelBtn">Cancel</button>
+      </div>
+    </div>
+    <p class="pp-error hidden" id="ppError"></p>
+  </div>
+</div>
+
+<!-- App -->
+<div class="app" id="app" style="display:none">
+
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-top">
+      <div class="brand">
+        <div class="brand-icon">🌊</div>
+        <span class="brand-name">NutriFlow</span>
+      </div>
+    </div>
+    <div class="user-card" id="userCard" role="button" tabindex="0" aria-haspopup="true" aria-expanded="false">
+      <div class="user-avatar" id="sidebarAvatar">R</div>
+      <div class="user-details">
+        <div class="user-name" id="sidebarName">Rayya</div>
+        <div class="user-streak"><span class="flame">🔥</span> <span id="sidebarStreak">0</span> day streak</div>
+        <span class="trial-badge hidden" id="trialBadge" role="status" aria-live="polite"></span>
+      </div>
+      <span class="user-card-chevron">›</span>
+    </div>
+    <div class="profile-dropdown hidden" id="profileDropdown" role="menu">
+      <label class="pd-item" id="changePhotoItem" role="menuitem" tabindex="0">
+        <span class="pd-icon">📷</span> Change Photo
+        <input type="file" id="avatarInput" accept="image/*" style="display:none">
+      </label>
+      <div class="pd-item" id="pdSwitchProfile" role="menuitem" tabindex="0"><span class="pd-icon">↩</span> Switch Profile</div>
+      <div class="pd-item" id="pdAddProfile" role="menuitem" tabindex="0"><span class="pd-icon">➕</span> Add New Profile</div>
+    </div>
+    <nav class="nav" role="navigation" aria-label="Main navigation">
+      <a class="nav-item active" data-page="dashboard" role="button" tabindex="0" aria-current="page"><span class="ni" aria-hidden="true">📊</span><span class="nl">Dashboard</span></a>
+      <a class="nav-item" data-page="foodlog" role="button" tabindex="0"><span class="ni" aria-hidden="true">🍽️</span><span class="nl">Food Log</span><span class="nav-badge hidden" id="foodBadge">0</span></a>
+      <a class="nav-item" data-page="recipes" role="button" tabindex="0"><span class="ni" aria-hidden="true">📖</span><span class="nl">Recipes</span></a>
+      <a class="nav-item" data-page="exercise" role="button" tabindex="0"><span class="ni" aria-hidden="true">💪</span><span class="nl">Exercise</span></a>
+      <a class="nav-item" data-page="progress" role="button" tabindex="0"><span class="ni" aria-hidden="true">📈</span><span class="nl">Progress</span></a>
+      <a class="nav-item" data-page="fasting" role="button" tabindex="0"><span class="ni" aria-hidden="true">⏱️</span><span class="nl">Fasting</span></a>
+      <a class="nav-item" data-page="achievements" role="button" tabindex="0"><span class="ni" aria-hidden="true">🏆</span><span class="nl">Achievements</span><span class="nav-badge hidden" id="achBadge" aria-label="New achievement">!</span></a>
+      <a class="nav-item" data-page="insights" role="button" tabindex="0"><span class="ni" aria-hidden="true">🤖</span><span class="nl">AI Insights</span></a>
+      <a class="nav-item" data-page="goals" role="button" tabindex="0"><span class="ni" aria-hidden="true">🎯</span><span class="nl">Goals</span></a>
+      <a class="nav-item" data-page="settings" role="button" tabindex="0"><span class="ni" aria-hidden="true">⚙️</span><span class="nl">Settings</span></a>
+      <a class="nav-item nav-item-plans" data-page="subscription" role="button" tabindex="0"><span class="ni" aria-hidden="true">✨</span><span class="nl">Plans</span></a>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="theme-btn" id="themeBtn"><span id="themeIcon">🌙</span> <span id="themeLabel">Dark Mode</span></button>
+    </div>
+  </aside>
+  <div class="sidebar-overlay" id="sidebarOverlay" aria-hidden="true"></div>
+
+  <!-- Main -->
+  <div class="main" id="main">
+    <!-- Topbar -->
+    <header class="topbar">
+      <div class="topbar-l">
+        <button class="hamburger" id="hamburger" aria-label="Toggle navigation menu" aria-expanded="false" aria-controls="sidebar">☰</button>
+        <h1 class="page-title" id="pageTitle">Dashboard</h1>
+      </div>
+      <div class="topbar-r">
+        <div class="date-nav" id="dateNav">
+          <button class="date-step-btn" id="dashPrevDay" aria-label="Previous day">&#8249;</button>
+          <div class="date-display-wrap">
+            <button class="date-display-btn" id="dateDisplayBtn" aria-label="Open calendar" aria-haspopup="dialog">
+              <span id="dashDateLabel">Today</span>
+            </button>
+            <button class="today-jump-btn hidden" id="todayJumpBtn">Today</button>
+            <div class="cal-popover hidden" id="calPopover" role="dialog" aria-modal="true" aria-label="Date picker">
+              <div class="cal-popover-hdr">
+                <button class="cal-nav-btn" id="calPrevMonth" aria-label="Previous month">&#8249;</button>
+                <span id="calMonthLabel"></span>
+                <button class="cal-nav-btn" id="calNextMonth" aria-label="Next month">&#8250;</button>
+              </div>
+              <div class="cal-dow-row" role="row">
+                <span>Su</span><span>Mo</span><span>Tu</span><span>We</span><span>Th</span><span>Fr</span><span>Sa</span>
+              </div>
+              <div class="cal-days" id="calDays" role="grid"></div>
+              <div class="cal-legend">
+                <span class="cal-dot has-data"></span><span>Logged</span>
+                <span style="flex:1"></span>
+                <span class="cal-dot goal-met"></span><span>Goal met</span>
+              </div>
+            </div>
+          </div>
+          <button class="date-step-btn" id="dashNextDay" aria-label="Next day" disabled>&#8250;</button>
+        </div>
+        <button class="btn-quick-add" id="quickAddBtn" aria-label="Quick add food">＋ Quick Add</button>
+      </div>
+    </header>
+
+    <!-- Pages -->
+    <div class="pages" id="main-content">
+
+      <!-- DASHBOARD -->
+      <section class="page active" id="page-dashboard">
+        <div class="dash-grid">
+          <!-- Left: Calorie Ring -->
+          <div class="dash-col-main">
+            <div class="card calorie-card">
+              <div class="calorie-ring-wrap">
+                <svg class="calorie-svg" viewBox="0 0 220 220">
+                  <defs>
+                    <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" style="stop-color:#6C63FF"/>
+                      <stop offset="100%" style="stop-color:#8B85FF"/>
+                    </linearGradient>
+                    <linearGradient id="ringGradGreen" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" style="stop-color:#00C46A"/>
+                      <stop offset="100%" style="stop-color:#00E070"/>
+                    </linearGradient>
+                    <linearGradient id="ringGradOrange" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" style="stop-color:#FF3355"/>
+                      <stop offset="100%" style="stop-color:#FF668A"/>
+                    </linearGradient>
+                  </defs>
+                  <circle class="ring-track" cx="110" cy="110" r="90"/>
+                  <circle class="ring-fill" id="calRing" cx="110" cy="110" r="90"/>
+                </svg>
+                <div class="ring-center">
+                  <div class="ring-remain" id="calRemain">2000</div>
+                  <div class="ring-sub">kcal remaining</div>
+                  <div class="ring-pct" id="calPct">0%</div>
+                </div>
+              </div>
+              <div class="cal-stats-row">
+                <div class="cal-stat">
+                  <div class="cs-val" id="csGoal">2000</div>
+                  <div class="cs-lbl">🎯 Goal</div>
+                </div>
+                <div class="cal-stat">
+                  <div class="cs-val" id="csEaten">0</div>
+                  <div class="cs-lbl">🍽️ Eaten</div>
+                </div>
+                <div class="cal-stat">
+                  <div class="cs-val" id="csBurned">0</div>
+                  <div class="cs-lbl">🔥 Burned</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Macro Photo Card + Quick Actions row -->
+            <div class="photo-actions-row">
+              <div id="macroPhotoCardWrap"></div>
+
+              <!-- Quick Actions Panel -->
+              <div class="card quick-actions-panel" id="quickActionsPanel">
+                <div class="qa-summary" id="qaSummary" aria-live="polite" aria-atomic="true">0% to your goal · 2000 kcal left</div>
+                <div class="qa-grid">
+                  <button class="qa-btn" id="qaAddMeal" aria-label="Add a meal">
+                    <span class="qa-icon" aria-hidden="true">🍽️</span>
+                    <span class="qa-label">Add Meal</span>
+                  </button>
+                  <button class="qa-btn" id="qaLogWater" aria-label="Log a glass of water">
+                    <span class="qa-icon" aria-hidden="true">💧</span>
+                    <span class="qa-label">Log Water</span>
+                  </button>
+                  <button class="qa-btn" id="qaLogExercise" aria-label="Log an exercise">
+                    <span class="qa-icon" aria-hidden="true">🏃</span>
+                    <span class="qa-label">Log Exercise</span>
+                  </button>
+                  <button class="qa-btn" id="qaLogWeight" aria-label="Log your weight">
+                    <span class="qa-icon" aria-hidden="true">⚖️</span>
+                    <span class="qa-label">Log Weight</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Macro Bars -->
+            <div class="card macro-card">
+              <div class="card-title">Macros Today</div>
+              <div class="macro-bars">
+                <div class="macro-row">
+                  <div class="macro-label"><span class="macro-dot protein-dot"></span>Protein</div>
+                  <div class="macro-bar-wrap"><div class="macro-bar-fill protein-fill" id="mbarProtein"></div></div>
+                  <div class="macro-val" id="mvalProtein">0g / 150g</div>
+                </div>
+                <div class="macro-row">
+                  <div class="macro-label"><span class="macro-dot carbs-dot"></span>Carbs</div>
+                  <div class="macro-bar-wrap"><div class="macro-bar-fill carbs-fill" id="mbarCarbs"></div></div>
+                  <div class="macro-val" id="mvalCarbs">0g / 200g</div>
+                </div>
+                <div class="macro-row">
+                  <div class="macro-label"><span class="macro-dot fat-dot"></span>Fat</div>
+                  <div class="macro-bar-wrap"><div class="macro-bar-fill fat-fill" id="mbarFat"></div></div>
+                  <div class="macro-val" id="mvalFat">0g / 65g</div>
+                </div>
+                <div class="macro-row">
+                  <div class="macro-label"><span class="macro-dot fiber-dot"></span>Fiber</div>
+                  <div class="macro-bar-wrap"><div class="macro-bar-fill fiber-fill" id="mbarFiber"></div></div>
+                  <div class="macro-val" id="mvalFiber">0g / 30g</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Weekly Chart -->
+            <div class="card chart-card">
+              <div class="card-title">📊 Weekly Overview</div>
+              <canvas id="weeklyChart"></canvas>
+            </div>
+          </div>
+
+          <!-- Right: Quick Stats -->
+          <div class="dash-col-side">
+            <!-- Water -->
+            <div class="card water-card">
+              <div class="card-title">💧 Water Intake</div>
+              <div class="water-cups" id="waterCups"></div>
+              <div class="water-info">
+                <span id="waterCount">0</span> / <span id="waterGoalDisplay">8</span> glasses
+              </div>
+            </div>
+            <!-- Streak & XP -->
+            <div class="card streak-card">
+              <div class="streak-main">
+                <div class="streak-flame-big">🔥</div>
+                <div class="streak-num" id="dashStreak">0</div>
+                <div class="streak-lbl">Day Streak</div>
+              </div>
+              <div class="xp-row">
+                <div class="xp-icon">⭐</div>
+                <div class="xp-bar-wrap"><div class="xp-bar-fill" id="xpBarFill"></div></div>
+                <div class="xp-val" id="xpVal">0 XP</div>
+              </div>
+            </div>
+            <!-- Weight -->
+            <div class="card weight-quick-card">
+              <div class="card-title">⚖️ Weight</div>
+              <div class="weight-display" id="dashWeight">-- kg</div>
+              <button class="btn-sm" id="logWeightBtn">Log Weight</button>
+            </div>
+            <!-- Today Meals -->
+            <div class="card meals-today-card">
+              <div class="card-title">Today's Meals</div>
+              <div class="meals-summary" id="mealsSummary"></div>
+            </div>
+            <!-- AI Suggestions -->
+            <div class="card ai-card">
+              <div class="card-title">🤖 AI Suggestions</div>
+              <div class="ai-sub">Based on your remaining macros</div>
+              <div class="ai-suggestions" id="aiSuggestions"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- FOOD LOG -->
+      <section class="page" id="page-foodlog">
+        <div class="foodlog-nav">
+          <button class="day-nav-btn" id="prevDay">‹</button>
+          <div class="foodlog-date" id="foodlogDate">Today</div>
+          <button class="day-nav-btn" id="nextDay">›</button>
+        </div>
+        <div class="foodlog-totals">
+          <span class="fl-total" id="flTotal">0</span> / <span id="flGoal">2000</span> kcal
+          <span class="fl-net" id="flNet"></span>
+        </div>
+        <div id="mealSections"></div>
+        <div class="card water-log-card">
+          <div class="card-title">💧 Water Intake</div>
+          <div class="water-cups-big" id="waterCupsBig"></div>
+        </div>
+      </section>
+
+      <!-- RECIPES -->
+      <section class="page" id="page-recipes">
+        <div class="page-header">
+          <h2>My Recipes</h2>
+          <button class="btn-primary" id="createRecipeBtn">＋ Create Recipe</button>
+        </div>
+        <div class="recipes-grid" id="recipesGrid"></div>
+        <div class="empty-state hidden" id="recipesEmpty">
+          <div class="empty-icon">📖</div>
+          <div class="empty-text">No recipes yet. Create your first one!</div>
+        </div>
+      </section>
+
+      <!-- EXERCISE -->
+      <section class="page" id="page-exercise">
+        <div class="page-header">
+          <h2>Exercise Log</h2>
+          <button class="btn-primary" id="addExerciseBtn">＋ Add Exercise</button>
+        </div>
+        <div class="ex-summary-row">
+          <div class="card ex-sum-card">
+            <div class="ex-sum-val" id="exTotalBurned">0</div>
+            <div class="ex-sum-lbl">kcal Burned</div>
+          </div>
+          <div class="card ex-sum-card">
+            <div class="ex-sum-val" id="exTotalTime">0 min</div>
+            <div class="ex-sum-lbl">Active Time</div>
+          </div>
+          <div class="card ex-sum-card">
+            <div class="ex-sum-val" id="exCount">0</div>
+            <div class="ex-sum-lbl">Sessions</div>
+          </div>
+        </div>
+        <div class="exercise-list" id="exerciseList">
+          <div class="empty-state" id="exEmpty">
+            <div class="empty-icon">💪</div>
+            <div class="empty-text">No exercise logged today. Get moving!</div>
+          </div>
+        </div>
+        <div class="card chart-card">
+          <div class="card-title">Activity This Week</div>
+          <canvas id="activityChart"></canvas>
+        </div>
+      </section>
+
+      <!-- PROGRESS -->
+      <section class="page" id="page-progress">
+        <div class="prog-tabs">
+          <button class="ptab active" data-ptab="weight">⚖️ Weight</button>
+          <button class="ptab" data-ptab="calories">🔥 Calories</button>
+          <button class="ptab" data-ptab="macros">🥗 Macros</button>
+          <button class="ptab" data-ptab="body">📏 Body</button>
+        </div>
+
+        <div class="ptab-content active" id="ptab-weight">
+          <div class="weight-stats-row">
+            <div class="card ws-card"><div class="ws-val" id="wsStart">--</div><div class="ws-lbl">Start (kg)</div></div>
+            <div class="card ws-card highlight"><div class="ws-val" id="wsCurrent">--</div><div class="ws-lbl">Current (kg)</div></div>
+            <div class="card ws-card"><div class="ws-val" id="wsGoal">--</div><div class="ws-lbl">Goal (kg)</div></div>
+            <div class="card ws-card"><div class="ws-val" id="wsChange">--</div><div class="ws-lbl">Change</div></div>
+          </div>
+          <div class="card chart-card"><canvas id="weightChart"></canvas></div>
+        </div>
+
+        <div class="ptab-content" id="ptab-calories">
+          <div class="card chart-card"><div class="card-title">Calorie History (30 days)</div><canvas id="calHistChart"></canvas></div>
+        </div>
+
+        <div class="ptab-content" id="ptab-macros">
+          <div class="card chart-card"><div class="card-title">Macro Trends (7 days)</div><canvas id="macroChart"></canvas></div>
+        </div>
+
+        <div class="ptab-content" id="ptab-body">
+          <div class="measurements-grid" id="measurementsGrid"></div>
+          <button class="btn-primary" style="margin-top:16px" id="addMeasBtn">＋ Log Measurements</button>
+        </div>
+      </section>
+
+      <!-- FASTING -->
+      <section class="page" id="page-fasting">
+        <div class="fasting-wrap">
+          <h2>Intermittent Fasting</h2>
+          <div class="fast-types">
+            <button class="fast-type-btn active" data-hours="16">16:8</button>
+            <button class="fast-type-btn" data-hours="18">18:6</button>
+            <button class="fast-type-btn" data-hours="20">20:4</button>
+            <button class="fast-type-btn" data-hours="24">OMAD</button>
+          </div>
+          <div class="fast-info" id="fastInfo">Fasting: 16h | Eating window: 8h</div>
+          <div class="fasting-ring-wrap">
+            <svg class="fasting-svg" viewBox="0 0 280 280">
+              <circle class="fast-track" cx="140" cy="140" r="120"/>
+              <circle class="fast-fill" id="fastRing" cx="140" cy="140" r="120"/>
+            </svg>
+            <div class="fast-center">
+              <div class="fast-time" id="fastTime">00:00:00</div>
+              <div class="fast-stage" id="fastStage">Not fasting</div>
+              <div class="fast-pct" id="fastPct">0%</div>
+            </div>
+          </div>
+          <div class="fast-controls">
+            <button class="btn-primary fast-ctrl-btn" id="startFastBtn">Start Fast</button>
+            <button class="btn-danger fast-ctrl-btn hidden" id="stopFastBtn">End Fast</button>
+          </div>
+          <div class="fast-schedule" id="fastSchedule"></div>
+          <div class="fast-history-section">
+            <h3>Recent Fasts</h3>
+            <div id="fastHistory"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ACHIEVEMENTS -->
+      <section class="page" id="page-achievements">
+        <div class="page-header">
+          <h2>Achievements</h2>
+          <div class="total-xp-display">⭐ <span id="totalXP">0</span> XP Total</div>
+        </div>
+        <div class="xp-level-card card">
+          <div class="level-info">
+            <div class="level-num" id="levelNum">1</div>
+            <div class="level-lbl">Current Level</div>
+          </div>
+          <div class="level-progress-wrap">
+            <div class="level-bar"><div class="level-fill" id="levelFill"></div></div>
+            <div class="level-xp-info" id="levelXPInfo">0 / 100 XP to next level</div>
+          </div>
+        </div>
+        <div class="ach-grid" id="achGrid"></div>
+      </section>
+
+      <!-- AI INSIGHTS -->
+      <section class="page" id="page-insights">
+        <div class="insights-header">
+          <h2>🤖 AI Insights</h2>
+          <p>Smart analysis of your nutrition patterns</p>
+        </div>
+        <div class="score-section">
+          <div class="card score-card">
+            <div class="score-ring-wrap">
+              <svg class="score-svg" viewBox="0 0 180 180">
+                <circle class="score-track" cx="90" cy="90" r="70"/>
+                <circle class="score-fill" id="scoreRing" cx="90" cy="90" r="70"/>
+              </svg>
+              <div class="score-center">
+                <div class="score-num" id="scoreNum">--</div>
+                <div class="score-lbl">Nutrition Score</div>
+              </div>
+            </div>
+            <div class="score-breakdown" id="scoreBreakdown"></div>
+          </div>
+        </div>
+        <div class="insights-grid" id="insightsGrid"></div>
+      </section>
+
+      <!-- GOALS -->
+      <section class="page" id="page-goals">
+        <div class="goals-wrap">
+          <h2>Your Goals</h2>
+          <div class="goals-grid">
+            <div class="card goals-card">
+              <h3>Goal Type</h3>
+              <div class="goal-type-row">
+                <button class="goal-type-btn active" data-gtype="lose">🔻 Lose Weight</button>
+                <button class="goal-type-btn" data-gtype="maintain">⚖️ Maintain</button>
+                <button class="goal-type-btn" data-gtype="gain">💪 Gain Muscle</button>
+              </div>
+            </div>
+            <div class="card goals-card">
+              <h3>Daily Targets</h3>
+              <div class="goal-inputs">
+                <div class="gi-row"><label>Calories (kcal)</label><input type="number" id="gcalories" value="2000" min="1000" max="5000"/></div>
+                <div class="gi-row"><label>Protein (g)</label><input type="number" id="gprotein" value="150" min="50" max="400"/></div>
+                <div class="gi-row"><label>Carbs (g)</label><input type="number" id="gcarbs" value="200" min="50" max="600"/></div>
+                <div class="gi-row"><label>Fat (g)</label><input type="number" id="gfat" value="65" min="20" max="250"/></div>
+                <div class="gi-row"><label>Fiber (g)</label><input type="number" id="gfiber" value="30" min="10" max="80"/></div>
+                <div class="gi-row"><label>Water (glasses)</label><input type="number" id="gwater" value="8" min="4" max="20"/></div>
+              </div>
+            </div>
+            <div class="card goals-card">
+              <h3>Weight Goals</h3>
+              <div class="goal-inputs">
+                <div class="gi-row"><label>Current Weight (kg)</label><input type="number" id="gcurrentW" step="0.1" value="75"/></div>
+                <div class="gi-row"><label>Goal Weight (kg)</label><input type="number" id="ggoalW" step="0.1" value="70"/></div>
+                <div class="gi-row"><label>Weekly Rate (kg/wk)</label><input type="number" id="grate" step="0.1" value="0.5" min="0.1" max="1"/></div>
+              </div>
+            </div>
+            <div class="card goals-card tdee-card">
+              <h3>TDEE Calculator</h3>
+              <div class="goal-inputs">
+                <div class="gi-row"><label>Age</label><input type="number" id="tdeeAge" value="25" min="15" max="80"/></div>
+                <div class="gi-row"><label>Height (cm)</label><input type="number" id="tdeeHeight" value="170"/></div>
+                <div class="gi-row"><label>Weight (kg)</label><input type="number" id="tdeeWeight" value="75"/></div>
+                <div class="gi-row"><label>Sex</label><select id="tdeeSex"><option value="male">Male</option><option value="female">Female</option></select></div>
+                <div class="gi-row"><label>Activity</label>
+                  <select id="tdeeActivity">
+                    <option value="1.2">Sedentary</option>
+                    <option value="1.375">Lightly Active</option>
+                    <option value="1.55" selected>Moderately Active</option>
+                    <option value="1.725">Very Active</option>
+                    <option value="1.9">Extremely Active</option>
+                  </select>
+                </div>
+                <button class="btn-secondary" id="calcTDEEBtn">Calculate TDEE</button>
+                <div class="tdee-result hidden" id="tdeeResult"></div>
+              </div>
+            </div>
+          </div>
+          <button class="btn-primary save-goals-btn" id="saveGoalsBtn">💾 Save Goals</button>
+        </div>
+      </section>
+
+      <!-- SETTINGS -->
+      <section class="page" id="page-settings">
+        <h2>Settings</h2>
+        <div class="settings-grid">
+          <div class="card settings-card">
+            <h3>👤 Profile</h3>
+            <div class="si-row"><label>Name</label><input type="text" id="sName" value=""/></div>
+            <div class="si-row"><label>Email</label><input type="email" id="sEmail" value=""/></div>
+            <button class="btn-secondary" id="switchProfileBtn" style="margin-top:8px">↩ Switch Profile</button>
+          </div>
+          <div class="card settings-card">
+            <h3>🎨 Display</h3>
+            <div class="si-row toggle-row"><label id="lbl-dark">Dark Mode</label><div class="toggle" id="darkToggle" role="switch" aria-checked="false" aria-labelledby="lbl-dark" tabindex="0"><div class="toggle-knob"></div></div></div>
+            <div class="si-row toggle-row"><label id="lbl-anim">Smooth Animations</label><div class="toggle active" id="animToggle" role="switch" aria-checked="true" aria-labelledby="lbl-anim" tabindex="0"><div class="toggle-knob"></div></div></div>
+            <div class="si-row toggle-row"><label id="lbl-sound">Sound Effects</label><div class="toggle" id="soundToggle" role="switch" aria-checked="false" aria-labelledby="lbl-sound" tabindex="0"><div class="toggle-knob"></div></div></div>
+          </div>
+          <div class="card settings-card">
+            <h3>🔔 Reminders</h3>
+            <div class="si-row toggle-row"><label>Meal Logging</label><div class="toggle active" id="mealReminderToggle"><div class="toggle-knob"></div></div></div>
+            <div class="si-row toggle-row"><label>Water Reminders</label><div class="toggle active" id="waterReminderToggle"><div class="toggle-knob"></div></div></div>
+            <div class="si-row toggle-row"><label>Weekly Reports</label><div class="toggle active" id="weeklyToggle"><div class="toggle-knob"></div></div></div>
+          </div>
+          <div class="card settings-card">
+            <h3>📊 Data</h3>
+            <button class="btn-secondary" id="exportCSVBtn">📥 Export to CSV</button>
+            <button class="btn-secondary" id="exportJSONBtn">📋 Export to JSON</button>
+            <label class="btn-secondary" id="importJSONLabel" style="cursor:pointer">📂 Import JSON Backup<input type="file" id="importJSONInput" accept=".json" style="display:none"/></label>
+            <button class="btn-danger" id="clearDataBtn">🗑️ Clear All Data</button>
+          </div>
+        </div>
+        <button class="btn-primary" id="saveSettingsBtn">💾 Save Settings</button>
+      </section>
+
+      <!-- SUBSCRIPTION -->
+      <section class="page" id="page-subscription">
+        <!-- rendered by renderSubscription() -->
+      </section>
+
+    </div><!-- /pages -->
+  </div><!-- /main -->
+</div><!-- /app -->
+
+<!-- MODALS -->
+
+<!-- Food Search -->
+<div class="modal-overlay hidden" id="foodModal" role="dialog" aria-modal="true" aria-labelledby="foodModalTitle">
+  <div class="modal">
+    <div class="modal-hdr">
+      <h3 id="foodModalTitle">Add Food</h3>
+      <button class="modal-close" id="foodModalClose" aria-label="Close food search">×</button>
+    </div>
+    <div class="modal-bdy">
+      <div class="search-wrap">
+        <input class="search-input" type="text" id="foodSearch" placeholder="🔍 Search 390+ foods from 15+ countries..." autocomplete="off" aria-label="Search foods"/>
+        <button class="btn-scan" id="scanBtn">📷 Scan</button>
+      </div>
+      <div class="category-filter-row" id="categoryFilters">
+        <button class="cat-btn active" data-cat="">All</button>
+        <button class="cat-btn" data-cat="pakistani">🇵🇰 Pakistani</button>
+        <button class="cat-btn" data-cat="indian">🇮🇳 Indian</button>
+        <button class="cat-btn" data-cat="arabic">🇸🇦 Arabic</button>
+        <button class="cat-btn" data-cat="chinese">🇨🇳 Chinese</button>
+        <button class="cat-btn" data-cat="japanese">🇯🇵 Japanese</button>
+        <button class="cat-btn" data-cat="korean">🇰🇷 Korean</button>
+        <button class="cat-btn" data-cat="mexican">🇲🇽 Mexican</button>
+        <button class="cat-btn" data-cat="italian">🇮🇹 Italian</button>
+        <button class="cat-btn" data-cat="turkish">🇹🇷 Turkish</button>
+        <button class="cat-btn" data-cat="african">🌍 African</button>
+        <button class="cat-btn" data-cat="american">🇺🇸 American</button>
+        <button class="cat-btn" data-cat="processed">🏭 Processed</button>
+        <button class="cat-btn" data-cat="fast food">🍔 Fast Food</button>
+        <button class="cat-btn" data-cat="protein">💪 Protein</button>
+        <button class="cat-btn" data-cat="vegetables">🥦 Veggies</button>
+        <button class="cat-btn" data-cat="fruits">🍎 Fruits</button>
+      </div>
+      <div class="search-results" id="searchResults"></div>
+      <div class="modal-footer-row">
+        <button class="btn-secondary" id="openCustomFoodBtn">＋ Add Custom Food</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Custom Food -->
+<div class="modal-overlay hidden" id="customFoodModal" role="dialog" aria-modal="true" aria-label="Add Custom Food">
+  <div class="modal">
+    <div class="modal-hdr"><h3>Add Custom Food</h3><button class="modal-close" id="customFoodClose" aria-label="Close custom food form">×</button></div>
+    <div class="modal-bdy">
+      <input class="cf-input" type="text" id="cfName" placeholder="Food name *"/>
+      <div class="cf-grid">
+        <div class="cf-group"><label>Serving</label><input type="number" id="cfServing" value="100"/></div>
+        <div class="cf-group"><label>Unit</label><select id="cfUnit"><option>g</option><option>ml</option><option>oz</option><option>cup</option><option>piece</option></select></div>
+        <div class="cf-group"><label>Calories *</label><input type="number" id="cfCal" placeholder="0"/></div>
+        <div class="cf-group"><label>Protein (g)</label><input type="number" id="cfPro" placeholder="0"/></div>
+        <div class="cf-group"><label>Carbs (g)</label><input type="number" id="cfCarb" placeholder="0"/></div>
+        <div class="cf-group"><label>Fat (g)</label><input type="number" id="cfFat" placeholder="0"/></div>
+        <div class="cf-group"><label>Fiber (g)</label><input type="number" id="cfFiber" placeholder="0"/></div>
+        <div class="cf-group"><label>Sugar (g)</label><input type="number" id="cfSugar" placeholder="0"/></div>
+      </div>
+      <button class="btn-primary" id="saveCustomFoodBtn">Save Food</button>
+    </div>
+  </div>
+</div>
+
+<!-- Serving Size -->
+<div class="modal-overlay hidden" id="servingModal" role="dialog" aria-modal="true" aria-labelledby="servingTitle">
+  <div class="modal modal-sm">
+    <div class="modal-hdr"><h3 id="servingTitle">Add Food</h3><button class="modal-close" id="servingClose" aria-label="Close serving size">×</button></div>
+    <div class="modal-bdy">
+      <div class="serving-food-card" id="servingFoodCard"></div>
+      <div class="serving-input-row">
+        <label for="servingInput">Servings</label>
+        <input type="number" id="servingInput" value="1" step="0.5" min="0.5" aria-label="Number of servings"/>
+        <span class="serving-unit" id="servingUnit">× 100g</span>
+      </div>
+      <div class="serving-preview" id="servingPreview"></div>
+      <button class="btn-primary" id="confirmAddBtn">Add to Log</button>
+    </div>
+  </div>
+</div>
+
+<!-- Exercise Modal -->
+<div class="modal-overlay hidden" id="exModal" role="dialog" aria-modal="true" aria-label="Log Exercise">
+  <div class="modal">
+    <div class="modal-hdr"><h3>Log Exercise</h3><button class="modal-close" id="exModalClose" aria-label="Close exercise log">×</button></div>
+    <div class="modal-bdy">
+      <div class="quick-exercises" id="quickExercises"></div>
+      <div class="divider">or add manually</div>
+      <div class="ex-form">
+        <input type="text" id="exName" placeholder="Exercise name"/>
+        <div class="ex-form-row">
+          <div class="ex-form-group"><label>Duration (min)</label><input type="number" id="exDuration" placeholder="30" min="1"/></div>
+          <div class="ex-form-group"><label>Calories Burned</label><input type="number" id="exCalories" placeholder="200" min="1"/></div>
+        </div>
+        <div class="ex-type-row">
+          <button class="ex-type-btn active" data-etype="cardio">🏃 Cardio</button>
+          <button class="ex-type-btn" data-etype="strength">🏋️ Strength</button>
+          <button class="ex-type-btn" data-etype="flexibility">🧘 Flexibility</button>
+          <button class="ex-type-btn" data-etype="sports">⚽ Sports</button>
+        </div>
+        <button class="btn-primary" id="saveExBtn">Log Exercise</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SadaPay Payment Modal -->
+<div class="modal-overlay hidden" id="sadapayModal" role="dialog" aria-modal="true" aria-label="Subscribe via SadaPay" data-plan="">
+  <div class="modal modal-sm sadapay-modal">
+    <div class="modal-hdr">
+      <div class="sp-modal-brand">
+        <div class="sp-modal-logo" aria-hidden="true">SP</div>
+        <div>
+          <div class="sp-modal-brand-name">SadaPay</div>
+          <div class="sp-modal-brand-sub">Pakistan's Digital Wallet</div>
+        </div>
+      </div>
+      <button class="modal-close" id="sadapayModalClose" aria-label="Close payment modal">×</button>
+    </div>
+    <div class="modal-bdy">
+      <!-- Plan chip — always visible -->
+      <div class="sp-plan-chip">
+        <span id="spModalPlanName">Pro · PKR 850/month</span>
+        <span class="sp-plan-usd" id="spModalPlanUSD">≈ $2.99 USD/month</span>
+      </div>
+
+      <!-- ── PHASE 1: Submit payment ── -->
+      <div id="sadapayPhase1">
+        <div class="sp-step-row">
+          <div class="sp-step-dot" aria-hidden="true">1</div>
+          <div class="sp-step-body">
+            <div class="sp-step-label">Open SadaPay and send to:</div>
+            <div class="sp-account-box">
+              <div class="sp-account-avatar" aria-hidden="true">Y</div>
+              <div>
+                <div class="sp-account-name" id="spModalAccName">Yahya Anas</div>
+                <div class="sp-account-number" id="spModalNumber">03174681197</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="sp-step-row">
+          <div class="sp-step-dot" aria-hidden="true">2</div>
+          <div class="sp-step-body">
+            <div class="sp-step-label">Paste your SadaPay transaction ID</div>
+            <input class="sp-txn-input" type="text" id="sadapayTxnId"
+              placeholder="Min 8 chars, e.g. SP240001234"
+              autocomplete="off" spellcheck="false"
+              aria-label="SadaPay transaction ID"/>
+            <div class="sp-txn-hint">Letters, numbers and hyphens only — no spaces</div>
+          </div>
+        </div>
+        <div class="sp-step-row">
+          <div class="sp-step-dot" aria-hidden="true">3</div>
+          <div class="sp-step-body">
+            <div class="sp-step-label">Submit — Yahya will verify and send your activation key</div>
+          </div>
+        </div>
+        <button class="btn-primary sp-confirm-btn" id="sadapayConfirmBtn">
+          Submit Transaction ID
+        </button>
+        <p class="sp-support-note">
+          Questions? <a href="mailto:yahyaanas2005@gmail.com" id="spModalEmail">yahyaanas2005@gmail.com</a>
+        </p>
+      </div>
+
+      <!-- ── PHASE 2: Pending + activation key ── -->
+      <div id="sadapayPhase2" class="hidden">
+        <div class="sp-pending-box">
+          <div class="sp-pending-icon" aria-hidden="true">✅</div>
+          <div>
+            <div class="sp-pending-title">Transaction submitted!</div>
+            <div class="sp-pending-txn">TXN: <strong id="spPendingTxn"></strong></div>
+          </div>
+        </div>
+        <div class="sp-step-row">
+          <div class="sp-step-dot" aria-hidden="true">1</div>
+          <div class="sp-step-body">
+            <div class="sp-step-label">Message Yahya your transaction ID to get your key:</div>
+            <a class="sp-whatsapp-btn" id="spWhatsappLink" href="#" target="_blank" rel="noopener">
+              <span aria-hidden="true">💬</span> Send via WhatsApp
+            </a>
+          </div>
+        </div>
+        <div class="sp-step-row">
+          <div class="sp-step-dot" aria-hidden="true">2</div>
+          <div class="sp-step-body">
+            <div class="sp-step-label">Once you receive your activation key, enter it here:</div>
+            <input class="sp-txn-input" type="text" id="sadapayActivationCode"
+              placeholder="NF-XXXX-XXXX-XXXX"
+              autocomplete="off" spellcheck="false"
+              aria-label="Activation key"/>
+          </div>
+        </div>
+        <button class="btn-primary sp-confirm-btn" id="sadapayActivateBtn">
+          Activate Subscription
+        </button>
+        <button class="sp-back-link" id="sadapayBackBtn">&#8592; Change transaction ID</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Weight Modal -->
+<div class="modal-overlay hidden" id="weightModal" role="dialog" aria-modal="true" aria-label="Log Weight">
+  <div class="modal modal-sm">
+    <div class="modal-hdr"><h3>Log Weight</h3><button class="modal-close" id="weightModalClose" aria-label="Close weight log">×</button></div>
+    <div class="modal-bdy">
+      <div class="weight-input-row">
+        <input type="number" id="weightInput" step="0.1" placeholder="75.0" aria-label="Weight in kilograms"/>
+        <span aria-hidden="true">kg</span>
+      </div>
+      <button class="btn-primary" id="saveWeightBtn">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Recipe Modal -->
+<div class="modal-overlay hidden" id="recipeModal" role="dialog" aria-modal="true" aria-labelledby="recipeModalTitle">
+  <div class="modal modal-lg">
+    <div class="modal-hdr"><h3 id="recipeModalTitle">Create Recipe</h3><button class="modal-close" id="recipeModalClose" aria-label="Close recipe editor">×</button></div>
+    <div class="modal-bdy">
+      <div class="recipe-form-top">
+        <input type="text" id="recipeName" placeholder="Recipe name *"/>
+        <input type="number" id="recipeServings" placeholder="Servings" value="1" min="1"/>
+      </div>
+      <div class="recipe-search-wrap">
+        <input type="text" id="recipeIngSearch" placeholder="Search ingredient..."/>
+        <div class="recipe-search-results" id="recipeSearchResults"></div>
+      </div>
+      <div class="recipe-ingredients" id="recipeIngredients">
+        <div class="ri-header"><span>Ingredient</span><span>Amount</span><span>Calories</span><span></span></div>
+      </div>
+      <div class="recipe-totals" id="recipeTotals"></div>
+      <button class="btn-primary" id="saveRecipeBtn">💾 Save Recipe</button>
+    </div>
+  </div>
+</div>
+
+<!-- Measurements Modal -->
+<div class="modal-overlay hidden" id="measModal" role="dialog" aria-modal="true" aria-label="Log Measurements">
+  <div class="modal">
+    <div class="modal-hdr"><h3>Log Measurements</h3><button class="modal-close" id="measModalClose" aria-label="Close measurements">×</button></div>
+    <div class="modal-bdy">
+      <div class="meas-grid">
+        <div class="meas-row"><label for="mChest">Chest (cm)</label><input type="number" id="mChest" step="0.5"/></div>
+        <div class="meas-row"><label for="mWaist">Waist (cm)</label><input type="number" id="mWaist" step="0.5"/></div>
+        <div class="meas-row"><label for="mHips">Hips (cm)</label><input type="number" id="mHips" step="0.5"/></div>
+        <div class="meas-row"><label for="mBicep">Bicep (cm)</label><input type="number" id="mBicep" step="0.5"/></div>
+        <div class="meas-row"><label for="mThigh">Thigh (cm)</label><input type="number" id="mThigh" step="0.5"/></div>
+        <div class="meas-row"><label for="mBodyFat">Body Fat (%)</label><input type="number" id="mBodyFat" step="0.5"/></div>
+      </div>
+      <button class="btn-primary" id="saveMeasBtn">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Barcode Overlay -->
+<div class="barcode-overlay hidden" id="barcodeOverlay">
+  <div class="barcode-frame">
+    <div class="scan-line"></div>
+    <div class="bc-corner tl"></div><div class="bc-corner tr"></div>
+    <div class="bc-corner bl"></div><div class="bc-corner br"></div>
+  </div>
+  <p class="bc-hint">Align barcode within frame</p>
+  <button class="btn-secondary" id="cancelScanBtn">Cancel</button>
+</div>
+
+<!-- Avatar Lightbox -->
+<div class="av-lightbox hidden" id="avatarLightbox" role="dialog" aria-modal="true" aria-label="Profile photo">
+  <div class="alb-backdrop" id="albBackdrop"></div>
+  <div class="alb-content">
+    <button class="alb-close" id="albClose" aria-label="Close">&#x2715;</button>
+    <div class="alb-photo-wrap">
+      <img class="alb-photo" id="albPhoto" alt="Profile photo">
+    </div>
+    <div class="alb-name" id="albName"></div>
+    <div class="alb-actions">
+      <label class="alb-action-btn" id="albChangePhoto" tabindex="0" role="button">
+        &#128247; Change Photo
+        <input type="file" id="albAvatarInput" accept="image/*" style="display:none">
+      </label>
+      <button class="alb-action-btn alb-action-remove" id="albRemovePhoto">&#128465; Remove Photo</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast-wrap" id="toastWrap" role="status" aria-live="polite" aria-atomic="false"></div>
+
+<!-- Confetti Canvas -->
+<canvas class="confetti-canvas" id="confettiCanvas"></canvas>
+
+<script src="db.js"></script>
+<script src="validation.js"></script>
+<script src="data.js"></script>
+<script src="imageService.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

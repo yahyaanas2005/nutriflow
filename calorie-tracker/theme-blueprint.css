@@ -1,0 +1,133 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+/* ================================================================
+   NUTRIFLOW — BLUEPRINT-TECH DESIGN SYSTEM
+   Token file. Loaded before styles.css.
+   New --c-* tokens only — no overrides of legacy variables here.
+================================================================ */
+
+:root {
+  /* ── Blueprint Backgrounds ───────────────────────────────── */
+  --c-void    : #050709;
+  --c-bg-0    : #090C13;
+  --c-bg-1    : #0E1220;
+  --c-bg-2    : #141928;
+  --c-bg-3    : #1C2236;
+
+  /* ── Borders ─────────────────────────────────────────────── */
+  --c-border-hot : rgba(108,99,255,0.45);
+  --c-border-dim : rgba(255,255,255,0.07);
+  --c-border-mid : rgba(255,255,255,0.13);
+
+  /* ── Blueprint Grid ──────────────────────────────────────── */
+  --c-grid     : rgba(108,99,255,0.035);
+  --grid-size  : 28px;
+
+  /* ── Single Accent (#6C63FF) ─────────────────────────────── */
+  --c-accent        : #6C63FF;
+  --c-accent-bright : #8B85FF;
+  --c-accent-glow   : rgba(108,99,255,0.22);
+  --c-accent-dim    : rgba(108,99,255,0.10);
+
+  /* ── Text ────────────────────────────────────────────────── */
+  --c-text-0  : #E8ECF5;
+  --c-text-1  : #7A8499;
+  --c-text-2  : #3E4A60;
+
+  /* ── Semantic ────────────────────────────────────────────── */
+  --c-ok   : #00C46A;
+  --c-err  : #FF3355;
+  --c-warn : #E8A020;
+
+  /* ── Macro Colors (violet family, desaturated) ───────────── */
+  --c-protein : #9B8FFF;
+  --c-carbs   : #C5B8FF;
+  --c-fat     : #64748B;
+  --c-fiber   : #3D8B62;
+  --c-water   : #3B82C4;
+
+  /* ── Typography ──────────────────────────────────────────── */
+  --font-display : 'Space Grotesk', sans-serif;
+  --font-body    : 'Inter', sans-serif;
+  --font-mono    : 'IBM Plex Mono', monospace;
+
+  /* ── Fluid Type Scale ────────────────────────────────────── */
+  --text-hero    : clamp(3.2rem, 9vw, 5.5rem);
+  --text-display : clamp(1.5rem, 3vw, 2rem);
+  --text-label   : 0.68rem;
+  --text-label-lg: 0.8rem;
+
+  /* ── Sharp Corners ───────────────────────────────────────── */
+  --r-card : 3px;
+  --r-sm   : 2px;
+  --r-pill : 4px;
+
+  /* ── Corner-Tick Tokens ──────────────────────────────────── */
+  --tick-size   : 9px;
+  --tick-weight : 1px;
+  --tick-color  : var(--c-accent);
+
+  /* ── Timing ──────────────────────────────────────────────── */
+  --dur-base  : 0.22s;
+  --ease-std  : cubic-bezier(0.4,0,0.2,1);
+}
+
+/* ── Card-frame: corner tick-mark utility ──────────────────────
+   Attach .card-frame to any positioned element to get the 4
+   L-shaped corner ticks. Built with a single ::before using 8
+   background-image gradients — zero extra DOM. */
+.card-frame { position: relative; }
+.card-frame::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(var(--tick-color), var(--tick-color)),
+    linear-gradient(var(--tick-color), var(--tick-color)),
+    linear-gradient(var(--tick-color), var(--tick-color)),
+    linear-gradient(var(--tick-color), var(--tick-color)),
+    linear-gradient(var(--tick-color), var(--tick-color)),
+    linear-gradient(var(--tick-color), var(--tick-color)),
+    linear-gradient(var(--tick-color), var(--tick-color)),
+    linear-gradient(var(--tick-color), var(--tick-color));
+  background-size:
+    var(--tick-weight) var(--tick-size), var(--tick-size) var(--tick-weight),
+    var(--tick-weight) var(--tick-size), var(--tick-size) var(--tick-weight),
+    var(--tick-weight) var(--tick-size), var(--tick-size) var(--tick-weight),
+    var(--tick-weight) var(--tick-size), var(--tick-size) var(--tick-weight);
+  background-position:
+    0 0, 0 0,
+    100% 0, 100% 0,
+    0 100%, 0 100%,
+    100% 100%, 100% 100%;
+  background-repeat: no-repeat;
+  opacity: 0.5;
+  transition: opacity var(--dur-base) var(--ease-std);
+}
+.card-frame:hover::before { opacity: 1; }
+
+/* ── Blueprint grid background (use on full-bleed sections) ─── */
+.blueprint-grid {
+  background-image:
+    linear-gradient(var(--c-grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--c-grid) 1px, transparent 1px);
+  background-size: var(--grid-size) var(--grid-size);
+  background-position: -1px -1px;
+}
+
+/* ── Utility classes ─────────────────────────────────────────── */
+.mono-label {
+  font-family: var(--font-mono);
+  font-size: var(--text-label);
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--c-text-1);
+}
+.display-heading {
+  font-family: var(--font-display);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+}
