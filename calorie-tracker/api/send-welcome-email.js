@@ -6,7 +6,7 @@ module.exports = async (req, res) => {
     return res.status(405).json({ success: false, error: "Method Not Allowed" });
   }
 
-  const { name, email, smtpSettings } = req.body;
+  const { name, email } = req.body;
 
   if (!name || !email) {
     return res.status(400).json({ success: false, error: "Name and email are required" });
@@ -14,26 +14,10 @@ module.exports = async (req, res) => {
 
   try {
     let transporter;
-    let isTest = false;
     let fromSender = process.env.SMTP_FROM || '"NutriFlow Team" <welcome@nutriflow-app.com>';
 
-    // Check if custom SMTP parameters are provided in body
-    if (smtpSettings && smtpSettings.smtpHost && smtpSettings.smtpUser && smtpSettings.smtpPass) {
-      const port = parseInt(smtpSettings.smtpPort || "587");
-      transporter = nodemailer.createTransport({
-        host: smtpSettings.smtpHost,
-        port: port,
-        secure: port === 465, // true for 465, false for other ports
-        auth: {
-          user: smtpSettings.smtpUser,
-          pass: smtpSettings.smtpPass,
-        },
-      });
-      if (smtpSettings.smtpSender) {
-        fromSender = smtpSettings.smtpSender;
-      }
-    } else if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
-      // Fallback to env variables
+    // Use environment variables if configured
+    if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
       transporter = nodemailer.createTransport({
         host: process.env.SMTP_HOST,
         port: parseInt(process.env.SMTP_PORT || "587"),
@@ -44,14 +28,14 @@ module.exports = async (req, res) => {
         },
       });
     } else {
-      // Fallback to the user's pre-configured Gmail SMTP account for seamless zero-config delivery
+      // Fallback to the pre-configured Gmail SMTP account for seamless zero-config delivery
       transporter = nodemailer.createTransport({
         host: "smtp.gmail.com",
         port: 465,
         secure: true,
         auth: {
           user: "nutritionflowai@gmail.com",
-          pass: "hufpyqbtfhluqdek", // Gmail app password without spaces
+          pass: "hufpyqbtfhluqdek",
         },
       });
       fromSender = '"NutriFlow Team" <nutritionflowai@gmail.com>';
@@ -61,7 +45,7 @@ module.exports = async (req, res) => {
     const mailOptions = {
       from: fromSender,
       to: email,
-      subject: "🌊 Welcome to NutriFlow, " + name + "!",
+      subject: "\ud83c\udf0a Welcome to NutriFlow, " + name + "!",
       html: `
         <!DOCTYPE html>
         <html>
@@ -174,29 +158,29 @@ module.exports = async (req, res) => {
           <div class="email-wrapper">
             <div class="email-container">
               <div class="email-header">
-                <div class="brand-logo">🌊</div>
+                <div class="brand-logo">\ud83c\udf0a</div>
                 <div class="brand-name">NutriFlow</div>
               </div>
               <div class="email-body">
-                <h2 class="greeting">Hi ${name}, welcome aboard! 👋</h2>
+                <h2 class="greeting">Hi ${name}, welcome aboard! \ud83d\udc4b</h2>
                 <p class="intro-text">
                   Thank you for joining NutriFlow. You've taken the first step toward smart, data-driven nutrition tracking. Here's a quick look at the features waiting for you in your dashboard:
                 </p>
                 <div class="features-grid">
                   <div class="feature-item">
-                    <span class="feature-icon">📊</span>
+                    <span class="feature-icon">\ud83d\udcca</span>
                     <span class="feature-text">Dynamic calorie & macro ring target tracking</span>
                   </div>
                   <div class="feature-item">
-                    <span class="feature-icon">⏱️</span>
+                    <span class="feature-icon">\u23f1\ufe0f</span>
                     <span class="feature-text">Autophagy-based intermittent fasting timers</span>
                   </div>
                   <div class="feature-item">
-                    <span class="feature-icon">🤖</span>
+                    <span class="feature-icon">\ud83e\udd16</span>
                     <span class="feature-text">Personalized AI Insights based on your logs</span>
                   </div>
                   <div class="feature-item">
-                    <span class="feature-icon">📖</span>
+                    <span class="feature-icon">\ud83d\udcd6</span>
                     <span class="feature-text">Interactive ingredient & custom recipe builder</span>
                   </div>
                 </div>
@@ -208,8 +192,8 @@ module.exports = async (req, res) => {
                 </p>
               </div>
               <div class="email-footer">
-                © ${new Date().getFullYear()} NutriFlow Calorie Tracker. All rights reserved.<br>
-                Made with 💚 by <a href="https://github.com/yahyaanas2005" target="_blank">Yahya Anas</a>.
+                \u00a9 ${new Date().getFullYear()} NutriFlow Calorie Tracker. All rights reserved.<br>
+                Made with \ud83d\udc9a by <a href="https://github.com/yahyaanas2005" target="_blank">Yahya Anas</a>.
               </div>
             </div>
           </div>
@@ -219,12 +203,7 @@ module.exports = async (req, res) => {
     };
 
     // Send the email
-    const info = await transporter.sendMail(mailOptions);
-
-    if (isTest) {
-      const previewUrl = nodemailer.getTestMessageUrl(info);
-      return res.status(200).json({ success: true, previewUrl });
-    }
+    await transporter.sendMail(mailOptions);
 
     return res.status(200).json({ success: true });
   } catch (error) {
