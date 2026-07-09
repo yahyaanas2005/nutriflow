@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Stripe Checkout</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0A2540;
+      --card-bg: #ffffff;
+      --text: #30313d;
+      --text-muted: #697386;
+      --accent: #635bff;
+      --accent-hover: #564ee5;
+      --border: #e6ebf1;
+      --error: #df1b41;
+      --success: #00ca72;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .checkout-container {
+      display: flex;
+      max-width: 850px;
+      width: 100%;
+      background: var(--card-bg);
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 50px 100px -20px rgba(50, 50, 93, 0.25), 0 30px 60px -30px rgba(0, 0, 0, 0.3);
+    }
+
+    /* Left panel (Product details) */
+    .product-panel {
+      flex: 1;
+      background: #F8F9FA;
+      padding: 40px;
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid var(--border);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 700;
+      font-size: 1.1rem;
+      color: var(--text-muted);
+      margin-bottom: 40px;
+    }
+    .brand-icon { font-size: 1.3rem; }
+
+    .back-link {
+      color: var(--accent);
+      text-decoration: none;
+      font-size: 0.85rem;
+      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 24px;
+    }
+    .back-link:hover { text-decoration: underline; }
+
+    .product-title {
+      font-size: 2.2rem;
+      font-weight: 700;
+      color: #0A2540;
+      margin-bottom: 8px;
+    }
+    .product-desc {
+      font-size: 0.95rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+      margin-bottom: 24px;
+    }
+
+    .price-row {
+      margin-top: auto;
+      border-top: 1px solid var(--border);
+      padding-top: 24px;
+    }
+    .price-usd {
+      font-size: 2.4rem;
+      font-weight: 700;
+      color: #0A2540;
+    }
+    .price-period {
+      font-size: 1rem;
+      font-weight: 500;
+      color: var(--text-muted);
+    }
+    .price-pkr {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    /* Right panel (Payment form) */
+    .payment-panel {
+      flex: 1.2;
+      padding: 40px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .stripe-header {
+      font-size: 1.2rem;
+      font-weight: 600;
+      margin-bottom: 24px;
+      color: #0A2540;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+    .form-group label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #4F5B66;
+      margin-bottom: 8px;
+    }
+
+    .form-input {
+      width: 100%;
+      padding: 12px 16px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 0.95rem;
+      color: var(--text);
+      background: #ffffff;
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .form-input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(99, 91, 255, 0.15);
+    }
+
+    /* Card input field grouping styling */
+    .card-element {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      background: #ffffff;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .card-element:focus-within {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(99, 91, 255, 0.15);
+    }
+    .card-row-top {
+      border-bottom: 1px solid var(--border);
+      display: flex;
+    }
+    .card-row-bottom {
+      display: flex;
+    }
+    .card-input-half {
+      flex: 1;
+    }
+    .card-element input {
+      border: none;
+      outline: none;
+      width: 100%;
+      padding: 12px 16px;
+      font-size: 0.95rem;
+    }
+    .card-element input::placeholder { color: #aab7c4; }
+    .card-input-half:first-child {
+      border-right: 1px solid var(--border);
+    }
+
+    .pay-btn {
+      width: 100%;
+      background: var(--accent);
+      color: #ffffff;
+      border: none;
+      border-radius: 8px;
+      padding: 14px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+      margin-top: 10px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 10px;
+    }
+    .pay-btn:hover { background: var(--accent-hover); }
+
+    .pay-btn-loader {
+      width: 18px;
+      height: 18px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-top-color: #ffffff;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+      display: none;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .stripe-badge {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 4px;
+      margin-top: 24px;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+    .stripe-badge svg { fill: var(--text-muted); width: 44px; height: 18px; }
+
+    .error-msg {
+      color: var(--error);
+      font-size: 0.85rem;
+      margin-top: 8px;
+      display: none;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .checkout-container { flex-direction: column; }
+      .product-panel { padding: 30px; }
+      .payment-panel { padding: 30px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="checkout-container">
+  <!-- Product Summary -->
+  <div class="product-panel">
+    <a href="/index.html" class="back-link">← Cancel and return</a>
+    <div class="brand"><span class="brand-icon">🌊</span> NutriFlow</div>
+    <div class="product-info">
+      <div class="product-desc" id="planLabel">Subscribe to NutriFlow Pro</div>
+      <h1 class="product-title" id="productTitle">NutriFlow Pro</h1>
+      <p class="product-desc">Unlock unlimited calorie logging, advanced tracking metrics, AI personalized nutritional feedback, and barcode scanner access.</p>
+    </div>
+    <div class="price-row">
+      <div class="price-usd"><span id="displayPriceUSD">$1.80</span><span class="price-period"> / month</span></div>
+      <div class="price-pkr">≈ PKR <span id="displayPricePKR">500</span> / month</div>
+    </div>
+  </div>
+
+  <!-- Stripe Card Form -->
+  <div class="payment-panel">
+    <h2 class="stripe-header">Pay with card (Mock Sandbox)</h2>
+    <form id="paymentForm">
+      <div class="form-group">
+        <label for="email">Email</label>
+        <input type="email" id="email" class="form-input" required placeholder="you@example.com">
+      </div>
+      
+      <div class="form-group">
+        <label>Card details</label>
+        <div class="card-element">
+          <!-- Card number -->
+          <div class="card-row-top">
+            <input type="text" id="cardNumber" required placeholder="4242 4242 4242 4242" maxlength="19" autocomplete="cc-number">
+          </div>
+          <!-- MM / YY and CVC -->
+          <div class="card-row-bottom">
+            <div class="card-input-half">
+              <input type="text" id="cardExpiry" required placeholder="MM / YY" maxlength="5" autocomplete="cc-exp">
+            </div>
+            <div class="card-input-half">
+              <input type="text" id="cardCvc" required placeholder="CVC" maxlength="4" autocomplete="cc-csc">
+            </div>
+          </div>
+        </div>
+        <p class="error-msg" id="paymentError">Invalid card details. Try again.</p>
+      </div>
+
+      <button type="submit" class="pay-btn" id="payBtn">
+        <span class="pay-btn-loader" id="loader"></span>
+        <span id="btnText">Subscribe</span>
+      </button>
+    </form>
+
+    <div class="stripe-badge">
+      Powered by 
+      <svg viewBox="0 0 60 25" xmlns="http://www.w3.org/2000/svg">
+        <path d="M59.64 14.28c0-2.07-1.12-3.83-2.97-3.83-1.84 0-3.05 1.76-3.05 3.83 0 2.45 1.25 3.9 3.09 3.9 1.83 0 2.93-1.45 2.93-3.9zm-4.32 0c0-1.22.58-1.92 1.34-1.92.76 0 1.27.7 1.27 1.92 0 1.35-.51 1.96-1.27 1.96-.76 0-1.34-.6-1.34-1.96zm-4.99-.07c0-1.07-.46-1.64-1.27-1.64-.81 0-1.34.6-1.34 1.64 0 1.15.53 1.71 1.34 1.71.81 0 1.27-.56 1.27-1.71zm0-3.88h1.63v7.35h-1.63v-.89c-.43.58-1.17 1.01-2.07 1.01-1.76 0-2.92-1.42-2.92-3.62 0-2.38 1.2-3.79 2.87-3.79.88 0 1.67.43 2.12 1.03v-1.09zm-8.89 1.95c0-1.09-.64-1.57-1.6-1.57-.96 0-1.62.48-1.62 1.57 0 2.52 4.41.7 4.41 4.2 0 2.1-1.65 3.32-3.72 3.32-2.22 0-3.73-1.12-3.73-3.03h1.72c0 1.1.88 1.55 2.01 1.55 1.08 0 1.63-.44 1.63-1.39 0-2.58-4.41-.66-4.41-4.05 0-2.01 1.62-3.32 3.63-3.32 1.86 0 3.32 1.04 3.32 2.72h-1.63zm-9.08-5.32h1.75v1.98h-1.75V19.3h-1.72v-8.07h-1.2v-1.89h1.2V5.2h1.72v1.76zm-5.07 1.98v7.35h-1.63v-.89c-.43.58-1.17 1.01-2.07 1.01-1.76 0-2.92-1.42-2.92-3.62 0-2.38 1.2-3.79 2.87-3.79.88 0 1.67.43 2.12 1.03v-1.09h1.63zm-3.41 1.95c0-1.07-.46-1.64-1.27-1.64-.81 0-1.34.6-1.34 1.64 0 1.15.53 1.71 1.34 1.71.81 0 1.27-.56 1.27-1.71zm-7.61-3.9h1.72v8.96H10.1v-8.96zm.85-2.61c.6 0 1.02.43 1.02 1.01 0 .6-.42 1.01-1.02 1.01-.58 0-1-.41-1-1.01 0-.58.42-1.01 1-1.01zM4.14 10.38h1.63v.89c.43-.58 1.17-1.01 2.07-1.01 1.76 0 2.92 1.42 2.92 3.62 0 2.38-1.2 3.79-2.87 3.79-.88 0-1.67-.43-2.12-1.03v3.91H4.14v-11.17zm3.41 1.95c0-1.07-.46-1.64-1.27-1.64-.81 0-1.34.6-1.34 1.64 0 1.15.53 1.71 1.34 1.71.81 0 1.27-.56 1.27-1.71z"/>
+      </svg>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Get query params
+  const params = new URLSearchParams(window.location.search);
+  const plan = params.get('plan') || 'pro';
+  const priceUSD = params.get('price_usd') || '1.80';
+  const pricePKR = params.get('price_pkr') || '500';
+  const emailParam = params.get('email') || '';
+
+  // Update UI texts
+  const isPremium = plan === 'premium';
+  document.getElementById('productTitle').textContent = isPremium ? 'NutriFlow Premium' : 'NutriFlow Pro';
+  document.getElementById('planLabel').textContent = isPremium ? 'Subscribe to NutriFlow Premium' : 'Subscribe to NutriFlow Pro';
+  document.getElementById('displayPriceUSD').textContent = `$${priceUSD}`;
+  document.getElementById('displayPricePKR').textContent = pricePKR;
+  document.getElementById('email').value = emailParam;
+  document.getElementById('btnText').textContent = `Pay $${priceUSD}`;
+
+  // Formatting inputs
+  document.getElementById('cardNumber').addEventListener('input', function (e) {
+    let value = e.target.value.replace(/\s+/g, '').replace(/[^0-9]/gi, '');
+    let formatted = '';
+    for (let i = 0; i < value.length; i++) {
+      if (i > 0 && i % 4 === 0) formatted += ' ';
+      formatted += value[i];
+    }
+    e.target.value = formatted;
+  });
+
+  document.getElementById('cardExpiry').addEventListener('input', function (e) {
+    let value = e.target.value.replace(/\s+/g, '').replace(/[^0-9]/gi, '');
+    if (value.length > 2) {
+      e.target.value = value.substring(0, 2) + ' / ' + value.substring(2, 4);
+    } else {
+      e.target.value = value;
+    }
+  });
+
+  // Handle Form Submit
+  document.getElementById('paymentForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+
+    const loader = document.getElementById('loader');
+    const payBtn = document.getElementById('payBtn');
+    const btnText = document.getElementById('btnText');
+    const errorMsg = document.getElementById('paymentError');
+
+    errorMsg.style.display = 'none';
+    loader.style.display = 'inline-block';
+    btnText.style.display = 'none';
+    payBtn.disabled = true;
+
+    // Simulate Stripe processing delay
+    setTimeout(() => {
+      // Validate card is not empty
+      const cardNum = document.getElementById('cardNumber').value.replace(/\s+/g, '');
+      const expiry = document.getElementById('cardExpiry').value;
+      const cvc = document.getElementById('cardCvc').value;
+
+      if (cardNum.length < 16 || expiry.length < 7 || cvc.length < 3) {
+        loader.style.display = 'none';
+        btnText.style.display = 'inline';
+        payBtn.disabled = false;
+        errorMsg.style.display = 'block';
+        return;
+      }
+
+      // Success! Generate mock session ID and redirect
+      const mockSessionId = `mock_${plan}_${Date.now()}`;
+      window.location.href = `/index.html?payment_success=true&plan=${plan}&session_id=${mockSessionId}`;
+    }, 2000);
+  });
+</script>
+
+</body>
+</html>
