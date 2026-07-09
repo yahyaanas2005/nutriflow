@@ -5,6 +5,7 @@
   "description": "NutriFlow — Calorie & Nutrition Tracker",
   "dependencies": {
     "nodemailer": "^6.9.12",
-    "pg": "^8.11.3"
+    "pg": "^8.11.3",
+    "stripe": "^14.22.0"
   }
 }
