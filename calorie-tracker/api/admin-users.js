@@ -1,4 +1,5 @@
 const { Client } = require("pg");
+const { verifyToken } = require("./admin-verify");
 
 module.exports = async (req, res) => {
   if (req.method !== "POST") {
@@ -6,9 +7,10 @@ module.exports = async (req, res) => {
   }
 
   const { token } = req.body;
+  const payload = verifyToken(token);
 
-  if (token !== "admin_session_active_nutriflow_2026") {
-    return res.status(401).json({ success: false, error: "Unauthorized" });
+  if (!payload) {
+    return res.status(401).json({ success: false, error: "Unauthorized — invalid or expired token" });
   }
 
   const client = new Client({
@@ -23,7 +25,6 @@ module.exports = async (req, res) => {
   try {
     await client.connect();
 
-    // Query profiles with login count and last login time
     const result = await client.query(`
       SELECT 
         p.id, 
@@ -31,11 +32,12 @@ module.exports = async (req, res) => {
         p.email, 
         p.phone, 
         p.created_at, 
+        COALESCE(p.subscription_plan, 'trial') AS subscription_plan,
         COUNT(l.id) AS login_count, 
         MAX(l.login_time) AS last_login
       FROM public.profiles p
       LEFT JOIN public.user_logins l ON p.id = l.profile_id
-      GROUP BY p.id, p.name, p.email, p.phone, p.created_at
+      GROUP BY p.id, p.name, p.email, p.phone, p.created_at, p.subscription_plan
       ORDER BY last_login DESC NULLS LAST;
     `);
 
