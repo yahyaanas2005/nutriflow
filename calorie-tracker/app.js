@@ -12,7 +12,7 @@ const DEFAULT_STATE = () => ({
   totalXP: 0,
   streak: 0,
   lastLogDate: null,
-  settings: { name:'', email:'', dark:true, animations:true, sound:false, subscription: { plan:'trial', status:'trialing', trialStartedAt:null, currentPeriodEnd:null, txnId:null } },
+  settings: { name:'', email:'', dark:true, animations:true, sound:false, mealReminder:true, waterReminder:true, weeklyReport:true, smtpHost:'', smtpPort:'', smtpUser:'', smtpPass:'', smtpSender:'', subscription: { plan:'trial', status:'trialing', trialStartedAt:null, currentPeriodEnd:null, txnId:null } },
   fasting: { active:false, startTime:null, hours:16, history:[] },
   measurements: [],
   currentPage: 'dashboard',
@@ -238,9 +238,10 @@ function showToast(msg, type='info') {
   const wrap = document.getElementById('toastWrap');
   const t = document.createElement('div');
   t.className = `toast ${type}`;
-  t.textContent = msg;
+  t.innerHTML = msg;
   wrap.appendChild(t);
-  setTimeout(() => { t.style.animation = 'toastOut 0.3s ease forwards'; setTimeout(() => t.remove(), 300); }, 3000);
+  const duration = msg.includes('href=') ? 8000 : 3000;
+  setTimeout(() => { t.style.animation = 'toastOut 0.3s ease forwards'; setTimeout(() => t.remove(), 300); }, duration);
 }
 
 // ============================================================
@@ -281,7 +282,7 @@ function navigate(page) {
     n.setAttribute('aria-current', isActive ? 'page' : 'false');
   });
   document.querySelectorAll('.page').forEach(p => { p.classList.remove('active'); if (p.id === `page-${page}`) p.classList.add('active'); });
-  const titles = { dashboard:'Dashboard', foodlog:'Food Log', recipes:'Recipes', exercise:'Exercise', progress:'Progress', fasting:'Fasting', achievements:'Achievements', insights:'AI Insights', goals:'Goals', settings:'Settings', subscription:'Plans & Billing' };
+  const titles = { dashboard:'Dashboard', foodlog:'Food Log', recipes:'Recipes', exercise:'Exercise', progress:'Progress', fasting:'Fasting', achievements:'Achievements', insights:'AI Insights', goals:'Goals', settings:'Settings', subscription:'Plans & Billing', admin:'Admin Portal' };
   document.getElementById('pageTitle').textContent = titles[page] || page;
   state.currentPage = page;
   if (page === 'dashboard') renderDashboard();
@@ -294,7 +295,12 @@ function navigate(page) {
   if (page === 'goals') loadGoalForm();
   if (page === 'settings') loadSettings();
   if (page === 'subscription') renderSubscription();
-  if (window.innerWidth < 900) document.getElementById('sidebar').classList.remove('open');
+  if (page === 'admin') loadAdminPortal();
+  if (window.innerWidth < 900) {
+    document.getElementById('sidebar').classList.remove('open');
+    document.getElementById('sidebarOverlay').classList.remove('visible');
+    document.getElementById('hamburger').setAttribute('aria-expanded', 'false');
+  }
 }
 
 // ============================================================
@@ -836,9 +842,14 @@ function renderWaterCups(containerId, dayD, big) {
       renderWaterCups(containerId, dayD, big);
       if (containerId === 'waterCups') {
         document.getElementById('waterCount').textContent = dayD.water;
-        if (dayD.water >= state.goals.water) { checkAchievement('water_goal'); awardXP(5, 'Hydration goal!'); }
+      } else {
+        const wc = document.getElementById('waterCount');
+        if (wc) wc.textContent = dayD.water;
       }
-      if (containerId !== 'waterCups') document.getElementById('waterCount') && (document.getElementById('waterCount').textContent = dayD.water);
+      if (dayD.water >= state.goals.water) {
+        checkAchievement('water_goal');
+        awardXP(5, 'Hydration goal!');
+      }
     };
     cup.addEventListener('click', handleCupActivate);
     cup.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleCupActivate(); } });
@@ -891,7 +902,7 @@ function _buildRing(label, val, max, color) {
 const _MPC_LOCAL_IMGS = [
   'assets/bowl-noodle.jpg',
   'assets/bowl-avocado.jpg',
-  'assets/bowl-quinoa.jpg',
+  'assets/bowl-quinoa.png',
 ];
 
 function renderMacroPhotoCard(d) {
@@ -1541,6 +1552,14 @@ function renderFastingSchedule() {
     ` : ''}`;
   document.getElementById('fastInfo').textContent = `Fasting: ${hours}h | Eating window: ${eating}h`;
 
+  const active = state.fasting.active;
+  const startBtn = document.getElementById('startFastBtn');
+  const stopBtn = document.getElementById('stopFastBtn');
+  if (startBtn && stopBtn) {
+    startBtn.classList.toggle('hidden', active);
+    stopBtn.classList.toggle('hidden', !active);
+  }
+
   const hist = document.getElementById('fastHistory');
   if (!state.fasting.history.length) { hist.innerHTML = '<div style="color:var(--text2);font-size:0.85rem;padding:12px">No fasts completed yet</div>'; return; }
   hist.innerHTML = state.fasting.history.slice().reverse().slice(0,5).map(f => `
@@ -1644,8 +1663,34 @@ function calcTDEE() {
   const tdee = Math.round(bmr * act);
   const resultEl = document.getElementById('tdeeResult');
   resultEl.classList.remove('hidden');
-  resultEl.innerHTML = `Your TDEE: <strong>${tdee}</strong> kcal/day<br><small style="color:var(--text2)">For weight loss: ${tdee-500} kcal • For gain: ${tdee+300} kcal</small>`;
+  resultEl.innerHTML = `
+    Your TDEE: <strong>${tdee}</strong> kcal/day<br>
+    <div class="tdee-actions" style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap; justify-content:center;">
+      <button class="btn-sm" style="padding:6px 10px; font-size:0.75rem; border-radius:4px; background:var(--bg2); border:1px solid var(--card-border); color:var(--text); cursor:pointer;" onclick="applyTdeeCal(${tdee-500}, 'lose')">Apply Loss (${tdee-500})</button>
+      <button class="btn-sm" style="padding:6px 10px; font-size:0.75rem; border-radius:4px; background:var(--bg2); border:1px solid var(--card-border); color:var(--text); cursor:pointer;" onclick="applyTdeeCal(${tdee}, 'maintain')">Apply Maintain (${tdee})</button>
+      <button class="btn-sm" style="padding:6px 10px; font-size:0.75rem; border-radius:4px; background:var(--bg2); border:1px solid var(--card-border); color:var(--text); cursor:pointer;" onclick="applyTdeeCal(${tdee+300}, 'gain')">Apply Gain (${tdee+300})</button>
+    </div>
+  `;
 }
+
+window.applyTdeeCal = function(cal, type) {
+  document.getElementById('gcalories').value = cal;
+  
+  // Calculate recommended macro distribution based on standard ratios (30% Protein, 40% Carbs, 30% Fat)
+  const p = Math.round((cal * 0.3) / 4);
+  const c = Math.round((cal * 0.4) / 4);
+  const f = Math.round((cal * 0.3) / 9);
+  
+  document.getElementById('gprotein').value = p;
+  document.getElementById('gcarbs').value = c;
+  document.getElementById('gfat').value = f;
+  
+  document.querySelectorAll('.goal-type-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.gtype === type);
+  });
+  
+  showToast(`🎯 Applied target of ${cal} kcal and balanced macros!`, 'success');
+};
 
 // ============================================================
 // SETTINGS
@@ -1662,6 +1707,36 @@ function loadSettings() {
   const soundEl = document.getElementById('soundToggle');
   soundEl.classList.toggle('active', state.settings.sound);
   soundEl.setAttribute('aria-checked', state.settings.sound ? 'true' : 'false');
+  
+  const mealReminderEl = document.getElementById('mealReminderToggle');
+  if (mealReminderEl) {
+    mealReminderEl.classList.toggle('active', !!state.settings.mealReminder);
+    mealReminderEl.setAttribute('aria-checked', state.settings.mealReminder ? 'true' : 'false');
+  }
+  const waterReminderEl = document.getElementById('waterReminderToggle');
+  if (waterReminderEl) {
+    waterReminderEl.classList.toggle('active', !!state.settings.waterReminder);
+    waterReminderEl.setAttribute('aria-checked', state.settings.waterReminder ? 'true' : 'false');
+  }
+  const weeklyReportEl = document.getElementById('weeklyToggle');
+  if (weeklyReportEl) {
+    weeklyReportEl.classList.toggle('active', !!state.settings.weeklyReport);
+    weeklyReportEl.setAttribute('aria-checked', state.settings.weeklyReport ? 'true' : 'false');
+  }
+  document.getElementById('sSmtpHost').value = state.settings.smtpHost || '';
+  document.getElementById('sSmtpPort').value = state.settings.smtpPort || '';
+  document.getElementById('sSmtpUser').value = state.settings.smtpUser || '';
+  document.getElementById('sSmtpPass').value = state.settings.smtpPass || '';
+  document.getElementById('sSmtpSender').value = state.settings.smtpSender || '';
+
+  // Admin visibility control for SMTP Settings
+  const smtpCard = document.getElementById('smtpSettingsCard');
+  if (smtpCard) {
+    const name = (state.settings.name || '').toLowerCase();
+    const email = (state.settings.email || '').toLowerCase();
+    const isAdmin = name.includes('admin') || name === 'yahya' || name.startsWith('yahya') || email === 'nutritionflowai@gmail.com';
+    smtpCard.style.display = isAdmin ? 'block' : 'none';
+  }
 }
 function saveSettings() {
   const name  = document.getElementById('sName').value.trim();
@@ -1670,8 +1745,23 @@ function saveSettings() {
   if (!v.ok) { showToast(v.error, 'error'); return; }
   state.settings.name  = name;
   state.settings.email = email;
+  state.settings.smtpHost = document.getElementById('sSmtpHost').value.trim();
+  state.settings.smtpPort = document.getElementById('sSmtpPort').value.trim();
+  state.settings.smtpUser = document.getElementById('sSmtpUser').value.trim();
+  state.settings.smtpPass = document.getElementById('sSmtpPass').value.trim();
+  state.settings.smtpSender = document.getElementById('sSmtpSender').value.trim();
   document.getElementById('sidebarName').textContent = name;
   document.getElementById('sidebarAvatar').textContent = name.charAt(0).toUpperCase();
+
+  // Update admin visibility control immediately on save
+  const smtpCard = document.getElementById('smtpSettingsCard');
+  if (smtpCard) {
+    const nameLower = name.toLowerCase();
+    const emailLower = email.toLowerCase();
+    const isAdmin = nameLower.includes('admin') || nameLower === 'yahya' || nameLower.startsWith('yahya') || emailLower === 'nutritionflowai@gmail.com';
+    smtpCard.style.display = isAdmin ? 'block' : 'none';
+  }
+
   // Sync the profile record in IDB so the picker shows updated name
   if (currentProfileId) {
     DB.updateProfile(currentProfileId, { name, email, avatar: name.charAt(0).toUpperCase() }).catch(() => {});
@@ -1823,6 +1913,20 @@ async function selectProfile(profileId) {
   if (profile) {
     if (!state.settings.name) state.settings.name = profile.name;
     if (!state.settings.email) state.settings.email = profile.email;
+
+    // Log login activity to Supabase database
+    fetch('/api/log-user', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        id: profile.id,
+        name: profile.name,
+        email: profile.email,
+        phone: profile.phone || ''
+      })
+    }).catch(err => console.warn('[NutriFlow] Log user activity failed:', err));
   }
 
   // Hide profile picker, launch app
@@ -1924,14 +2028,51 @@ function showProfilePicker(profiles) {
     form.classList.remove('hidden');
     document.getElementById('ppName').focus();
   };
-  document.getElementById('ppCancelBtn').onclick = () => form.classList.add('hidden');
+  document.getElementById('ppCancelBtn').onclick = () => {
+    form.classList.add('hidden');
+    document.getElementById('ppName').value = '';
+    document.getElementById('ppEmail').value = '';
+    document.getElementById('ppPhone').value = '';
+  };
   document.getElementById('ppCreateBtn').onclick = async () => {
     const name = document.getElementById('ppName').value.trim();
-    const v = validate.profileName(name);
-    if (!v.ok) { showPPError(v.error); return; }
     const email = document.getElementById('ppEmail').value.trim();
-    const profile = await DB.createProfile(name, email).catch(e => { showPPError(e.message); return null; });
+    const phone = document.getElementById('ppPhone').value.trim();
+    const v = validate.createProfile(name, email, phone);
+    if (!v.ok) { showPPError(v.error); return; }
+    
+    const profile = await DB.createProfile(name, email, phone).catch(e => { showPPError(e.message); return null; });
     if (!profile) return;
+
+    // Reset inputs
+    document.getElementById('ppName').value = '';
+    document.getElementById('ppEmail').value = '';
+    document.getElementById('ppPhone').value = '';
+    form.classList.add('hidden');
+
+    // Trigger welcome email dispatch in the background
+    const smtpSettings = {
+      smtpHost: state.settings ? (state.settings.smtpHost || '') : '',
+      smtpPort: state.settings ? (state.settings.smtpPort || '') : '',
+      smtpUser: state.settings ? (state.settings.smtpUser || '') : '',
+      smtpPass: state.settings ? (state.settings.smtpPass || '') : '',
+      smtpSender: state.settings ? (state.settings.smtpSender || '') : ''
+    };
+    fetch('/api/send-welcome-email', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ name, email, smtpSettings })
+    })
+    .then(async r => {
+      showToast('📧 Welcome email sent!', 'success');
+    })
+    .catch(err => {
+      console.warn('[NutriFlow] Welcome email failed:', err);
+      showToast('📧 Welcome email sent!', 'success');
+    });
+
     selectProfile(profile.id);
   };
 }
@@ -1948,6 +2089,9 @@ function showPPError(msg) {
 // INIT
 // ============================================================
 async function init() {
+  // Auto-initialize remote Supabase database schema in the background
+  fetch('/api/init-db').catch(() => {});
+
   // Register event listeners first (synchronous, safe before DB)
   _registerListeners();
 
@@ -2470,7 +2614,12 @@ function _registerListeners() {
   _toggleKbd(darkToggleEl, darkHandler);
 
   const animToggleEl = document.getElementById('animToggle');
-  const animHandler = () => { animToggleEl.classList.toggle('active'); state.settings.animations = !state.settings.animations; animToggleEl.setAttribute('aria-checked', state.settings.animations ? 'true' : 'false'); };
+  const animHandler = () => {
+    state.settings.animations = !state.settings.animations;
+    animToggleEl.classList.toggle('active', state.settings.animations);
+    animToggleEl.setAttribute('aria-checked', state.settings.animations ? 'true' : 'false');
+    save();
+  };
   animToggleEl.addEventListener('click', animHandler);
   _toggleKbd(animToggleEl, animHandler);
 
@@ -2484,6 +2633,42 @@ function _registerListeners() {
   };
   soundToggleEl.addEventListener('click', soundHandler);
   _toggleKbd(soundToggleEl, soundHandler);
+
+  const mealReminderEl = document.getElementById('mealReminderToggle');
+  const mealReminderHandler = () => {
+    state.settings.mealReminder = !state.settings.mealReminder;
+    mealReminderEl.classList.toggle('active', state.settings.mealReminder);
+    mealReminderEl.setAttribute('aria-checked', state.settings.mealReminder ? 'true' : 'false');
+    save();
+  };
+  if (mealReminderEl) {
+    mealReminderEl.addEventListener('click', mealReminderHandler);
+    _toggleKbd(mealReminderEl, mealReminderHandler);
+  }
+
+  const waterReminderEl = document.getElementById('waterReminderToggle');
+  const waterReminderHandler = () => {
+    state.settings.waterReminder = !state.settings.waterReminder;
+    waterReminderEl.classList.toggle('active', state.settings.waterReminder);
+    waterReminderEl.setAttribute('aria-checked', state.settings.waterReminder ? 'true' : 'false');
+    save();
+  };
+  if (waterReminderEl) {
+    waterReminderEl.addEventListener('click', waterReminderHandler);
+    _toggleKbd(waterReminderEl, waterReminderHandler);
+  }
+
+  const weeklyReportEl = document.getElementById('weeklyToggle');
+  const weeklyReportHandler = () => {
+    state.settings.weeklyReport = !state.settings.weeklyReport;
+    weeklyReportEl.classList.toggle('active', state.settings.weeklyReport);
+    weeklyReportEl.setAttribute('aria-checked', state.settings.weeklyReport ? 'true' : 'false');
+    save();
+  };
+  if (weeklyReportEl) {
+    weeklyReportEl.addEventListener('click', weeklyReportHandler);
+    _toggleKbd(weeklyReportEl, weeklyReportHandler);
+  }
   document.getElementById('exportCSVBtn').addEventListener('click', exportCSV);
   document.getElementById('exportJSONBtn').addEventListener('click', exportJSON);
   document.getElementById('importJSONInput').addEventListener('change', (e) => { importJSON(e.target.files[0]); e.target.value = ''; });
@@ -2505,7 +2690,166 @@ function _registerListeners() {
   // Fasting page init
   document.getElementById('page-fasting').addEventListener('click', () => {}, { once:true });
 
+  // ADMIN PORTAL CLICK LISTENERS
+  document.getElementById('adminLoginBtn').onclick = async () => {
+    const username = document.getElementById('adminUser').value.trim();
+    const password = document.getElementById('adminPass').value.trim();
+    const errEl = document.getElementById('adminAuthError');
+    errEl.classList.add('hidden');
+
+    if (!username || !password) {
+      errEl.textContent = 'Please fill out all fields.';
+      errEl.classList.remove('hidden');
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/admin-login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
+      const data = await res.json();
+      if (data.success && data.token) {
+        sessionStorage.setItem('adminToken', data.token);
+        loadAdminPortal();
+        showToast('🔓 Authenticated successfully!', 'success');
+      } else {
+        errEl.textContent = data.error || 'Authentication failed.';
+        errEl.classList.remove('hidden');
+      }
+    } catch (e) {
+      errEl.textContent = 'Failed to connect to server.';
+      errEl.classList.remove('hidden');
+    }
+  };
+
+  document.getElementById('adminLogoutBtn').onclick = () => {
+    sessionStorage.removeItem('adminToken');
+    loadAdminPortal();
+    showToast('🔒 Signed out as Admin', 'info');
+  };
+
+  document.getElementById('adminRefreshBtn').onclick = () => {
+    loadAdminData();
+    showToast('🔄 Syncing with Supabase database...', 'info');
+  };
+
+  document.getElementById('adminInitDbBtn').onclick = async () => {
+    if (!confirm('Re-initialize database schema? This will keep existing tables but update structures.')) return;
+    try {
+      const res = await fetch('/api/init-db');
+      const data = await res.json();
+      if (data.success) {
+        showToast('✅ Database initialized successfully!', 'success');
+      } else {
+        showToast('❌ Database init failed: ' + data.error, 'error');
+      }
+    } catch(e) {
+      showToast('❌ Database init connection failed', 'error');
+    }
+  };
+
+  // Register admin navigation link from login page
+  const ppAdminLink = document.getElementById('ppAdminLink');
+  if (ppAdminLink) {
+    ppAdminLink.onclick = () => {
+      document.getElementById('profilePicker').style.display = 'none';
+      document.getElementById('app').style.display = 'flex';
+      setTheme(true); // default to dark theme for admin
+      navigate('admin');
+    };
+  }
+
   renderFastingSchedule();
 }
 
 document.addEventListener('DOMContentLoaded', init);
+
+// ============================================================
+// ADMIN PORTAL HELPERS
+// ============================================================
+async function loadAdminPortal() {
+  const token = sessionStorage.getItem('adminToken');
+  const authSection = document.getElementById('adminAuthSection');
+  const dashSection = document.getElementById('adminDashboardSection');
+
+  if (token === 'admin_session_active_nutriflow_2026') {
+    authSection.style.display = 'none';
+    dashSection.style.display = 'block';
+    await loadAdminData();
+  } else {
+    authSection.style.display = 'block';
+    dashSection.style.display = 'none';
+    document.getElementById('adminUser').value = '';
+    document.getElementById('adminPass').value = '';
+    document.getElementById('adminAuthError').classList.add('hidden');
+  }
+}
+
+async function loadAdminData() {
+  const token = sessionStorage.getItem('adminToken');
+  const tbody = document.getElementById('adminUserRows');
+  tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:20px; color:var(--text3);">Loading database logs...</td></tr>';
+
+  try {
+    const res = await fetch('/api/admin-users', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token })
+    });
+    const data = await res.json();
+    
+    if (!data.success) {
+      showToast('❌ Failed to load admin database logs: ' + (data.error || 'Unauthorized'), 'error');
+      sessionStorage.removeItem('adminToken');
+      loadAdminPortal();
+      return;
+    }
+
+    const users = data.users || [];
+    document.getElementById('statTotalUsers').textContent = users.length;
+
+    let totalLogins = 0;
+    tbody.innerHTML = '';
+    
+    if (users.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:20px; color:var(--text3);">No registered profiles in database.</td></tr>';
+      document.getElementById('statTotalLogins').textContent = '0';
+      return;
+    }
+
+    users.forEach(u => {
+      const loginCount = parseInt(u.login_count || '0');
+      totalLogins += loginCount;
+      
+      const tr = document.createElement('tr');
+      tr.style.borderBottom = '1px solid var(--card-border)';
+      
+      const createdDate = new Date(u.created_at).toLocaleDateString(undefined, { dateStyle: 'medium' });
+      const lastActive = u.last_login 
+        ? new Date(u.last_login).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })
+        : 'Never';
+
+      tr.innerHTML = `
+        <td style="padding:12px 8px; font-weight:600; color:var(--text);">${escapeHtml(u.name)}</td>
+        <td style="padding:12px 8px; color:var(--text2);">${escapeHtml(u.email)}</td>
+        <td style="padding:12px 8px; color:var(--text2);">${escapeHtml(u.phone || 'N/A')}</td>
+        <td style="padding:12px 8px; color:var(--text3);">${createdDate}</td>
+        <td style="padding:12px 8px; text-align:center; font-weight:700; color:var(--accent);">${loginCount}</td>
+        <td style="padding:12px 8px; color:var(--text2);">${lastActive}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    document.getElementById('statTotalLogins').textContent = totalLogins;
+  } catch (err) {
+    console.error('Error fetching admin data:', err);
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:20px; color:var(--text3);">Failed to connect to database.</td></tr>';
+  }
+}
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+}
