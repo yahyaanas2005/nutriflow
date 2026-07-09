@@ -232,12 +232,13 @@ input[type=number]::-webkit-inner-spin-button { opacity:0.5; }
 
 /* ===== SIDEBAR ===== */
 .sidebar {
-  width:var(--sidebar-w); min-height:100vh; background:var(--bg2);
+  width:var(--sidebar-w); height:100vh; background:var(--bg2);
   border-right:1px solid var(--card-border);
   display:flex; flex-direction:column; padding:20px 0;
   position:fixed; top:0; left:0; z-index:100;
   transition:transform var(--transition), width var(--transition);
   backdrop-filter:blur(20px);
+  overflow-y:auto; overflow-x:hidden;
 }
 .sidebar.collapsed { transform:translateX(-100%); }
 .sidebar-top { padding:0 20px 16px; }
@@ -254,14 +255,14 @@ input[type=number]::-webkit-inner-spin-button { opacity:0.5; }
 .user-name { font-weight:600; font-size:0.9rem; }
 .user-streak { font-size:0.75rem; color:var(--text2); margin-top:2px; }
 /* ── Profile Dropdown ──────────────────────────────────────── */
-.profile-dropdown { margin:0 12px 8px; background:var(--card); border:1px solid var(--c-border-hot); border-radius:var(--radius-sm); overflow:hidden; animation:pageIn 0.15s ease; }
+.profile-dropdown { margin:0 12px 8px; background:var(--card); border:1px solid var(--c-border-hot); border-radius:var(--radius-sm); overflow:hidden; animation:pageIn 0.15s ease; flex-shrink:0; }
 .profile-dropdown.hidden { display:none; }
 .pd-item { display:flex; align-items:center; gap:10px; padding:11px 16px; font-size:0.85rem; color:var(--text2); cursor:pointer; transition:background var(--transition), color var(--transition); }
 .pd-item:hover { background:var(--c-accent-dim); color:var(--text); }
 .pd-icon { font-size:1rem; width:20px; text-align:center; }
 .flame { animation:flameWiggle 0.5s ease-in-out infinite alternate; display:inline-block; }
 @keyframes flameWiggle { from { transform:rotate(-5deg); } to { transform:rotate(5deg); } }
-.nav { flex:1; padding:8px 12px; overflow-y:auto; }
+.nav { padding:8px 12px; }
 .nav-item {
   display:flex; align-items:center; gap:10px; padding:11px 12px; border-radius:var(--radius-sm);
   margin-bottom:2px; color:var(--text2); transition:all var(--transition); position:relative; cursor:pointer;
@@ -273,7 +274,7 @@ input[type=number]::-webkit-inner-spin-button { opacity:0.5; }
 .nl { font-family:var(--font-mono); font-size:0.78rem; letter-spacing:0.04em; }
 .nav-badge { font-family:var(--font-mono); font-size:0.6rem; font-weight:600; background:var(--c-accent); color:#fff; border-radius:var(--r-sm); padding:2px 6px; margin-left:auto; }
 .nav-badge.hidden { display:none; }
-.sidebar-footer { padding:16px 20px 0; border-top:1px solid var(--card-border); }
+.sidebar-footer { padding:16px 20px 0; border-top:1px solid var(--card-border); margin-top:auto; }
 .theme-btn { display:flex; align-items:center; gap:8px; padding:10px 14px; width:100%; border-radius:var(--radius-sm); background:var(--card); border:1px solid var(--card-border); color:var(--text2); font-size:0.85rem; transition:all var(--transition); }
 .theme-btn:hover { background:var(--card-hover); color:var(--text); }
 
@@ -1462,4 +1463,24 @@ input[type=number]::-webkit-inner-spin-button { opacity:0.5; }
   .sri-add { width:44px; height:44px; }
   .cat-btn { padding:8px 14px; }
   .btn-sm { padding:10px 16px; }
+}
+
+/* Admin Dashboard Table Styles */
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+}
+.admin-table th {
+  font-weight: 600;
+  border-bottom: 2px solid var(--c-border-hot);
+}
+.admin-table td {
+  padding: 12px 8px;
+  border-bottom: 1px solid var(--card-border);
+  color: var(--text);
+  vertical-align: middle;
+}
+.admin-table tr:hover {
+  background: var(--c-accent-dim) !important;
 }
