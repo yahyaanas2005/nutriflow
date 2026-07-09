@@ -26,14 +26,16 @@
 
 <!-- Profile Picker (shown after loading, before app) -->
 <div id="profilePicker" style="display:none">
-  <div class="pp-container">
+  <div class="pp-container" style="position:relative;">
+    <button id="ppAdminLink" class="btn-text" style="position:absolute; top:20px; right:20px; color:var(--text2); font-size:0.9rem;" title="Admin Portal">🔑 Admin</button>
     <div class="pp-logo"><span>🌊</span> NutriFlow</div>
     <h2 class="pp-title">Who's tracking today?</h2>
     <div class="pp-grid" id="ppGrid"></div>
     <button class="btn-secondary pp-add-btn" id="ppAddBtn">＋ Add Profile</button>
     <div class="pp-new-form hidden" id="ppNewForm">
       <input type="text" id="ppName" placeholder="Your name" maxlength="50" autocomplete="name"/>
-      <input type="email" id="ppEmail" placeholder="Email (optional)" autocomplete="email"/>
+      <input type="email" id="ppEmail" placeholder="Email" autocomplete="email"/>
+      <input type="tel" id="ppPhone" placeholder="Phone number" autocomplete="tel"/>
       <div class="pp-form-btns">
         <button class="btn-primary" id="ppCreateBtn">Create Profile</button>
         <button class="btn-text" id="ppCancelBtn">Cancel</button>
@@ -544,8 +546,71 @@
             <label class="btn-secondary" id="importJSONLabel" style="cursor:pointer">📂 Import JSON Backup<input type="file" id="importJSONInput" accept=".json" style="display:none"/></label>
             <button class="btn-danger" id="clearDataBtn">🗑️ Clear All Data</button>
           </div>
+          <div class="card settings-card" id="smtpSettingsCard">
+            <h3>📧 Welcome Email SMTP Settings</h3>
+            <div class="si-row"><label>SMTP Host</label><input type="text" id="sSmtpHost" placeholder="e.g. smtp.gmail.com" value=""/></div>
+            <div class="si-row"><label>SMTP Port</label><input type="number" id="sSmtpPort" placeholder="e.g. 465 or 587" value=""/></div>
+            <div class="si-row"><label>SMTP User</label><input type="text" id="sSmtpUser" placeholder="yourname@gmail.com" value=""/></div>
+            <div class="si-row"><label>SMTP Password</label><input type="password" id="sSmtpPass" placeholder="App Password" value=""/></div>
+            <div class="si-row"><label>Sender Email</label><input type="email" id="sSmtpSender" placeholder="welcome@nutriflow-app.com" value=""/></div>
+          </div>
         </div>
         <button class="btn-primary" id="saveSettingsBtn">💾 Save Settings</button>
+      </section>
+
+      <!-- ADMIN PORTAL -->
+      <section class="page" id="page-admin">
+        <div id="adminAuthSection">
+          <h2>🔑 Admin Portal</h2>
+          <div class="card settings-card" style="max-width:400px; margin: 40px auto; padding:30px;">
+            <h3 style="text-align:center; margin-bottom:20px;">Administrator Login</h3>
+            <div class="si-row"><label>Username</label><input type="text" id="adminUser" placeholder="admin" value=""/></div>
+            <div class="si-row"><label>Password</label><input type="password" id="adminPass" placeholder="Password" value=""/></div>
+            <button class="btn-primary" id="adminLoginBtn" style="width:100%; margin-top:20px;">🔓 Authenticate</button>
+            <p class="pp-error hidden" id="adminAuthError" style="margin-top:15px; text-align:center;"></p>
+          </div>
+        </div>
+        <div id="adminDashboardSection" style="display:none">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+            <h2>🔑 Admin Dashboard</h2>
+            <div>
+              <button class="btn-secondary" id="adminRefreshBtn" style="margin-right:8px">🔄 Refresh</button>
+              <button class="btn-danger" id="adminLogoutBtn">🔒 Sign Out</button>
+            </div>
+          </div>
+          <div class="settings-grid" style="margin-bottom:20px;">
+            <div class="card settings-card" style="padding:20px; text-align:center;">
+              <h3 style="margin-bottom:8px; color:var(--text2);">👥 Total Registered Users</h3>
+              <p style="font-size:2rem; font-weight:800; color:var(--accent); margin:0;" id="statTotalUsers">0</p>
+            </div>
+            <div class="card settings-card" style="padding:20px; text-align:center;">
+              <h3 style="margin-bottom:8px; color:var(--text2);">🔌 Total Logins Logged</h3>
+              <p style="font-size:2rem; font-weight:800; color:var(--accent); margin:0;" id="statTotalLogins">0</p>
+            </div>
+            <div class="card settings-card" style="padding:20px; text-align:center;">
+              <h3 style="margin-bottom:8px; color:var(--text2);">🛠️ Actions</h3>
+              <button class="btn-secondary" id="adminInitDbBtn" style="width:100%; margin-top:5px;">⚙️ Re-Initialize DB Schema</button>
+            </div>
+          </div>
+          <div class="card" style="padding:20px; overflow-x:auto;">
+            <h3 style="margin-bottom:15px;">Registered Users Database Logs</h3>
+            <table style="width:100%; border-collapse:collapse; text-align:left; font-size:0.9rem;" class="admin-table">
+              <thead>
+                <tr style="border-bottom:2px solid var(--c-border-hot); color:var(--text2);">
+                  <th style="padding:12px 8px;">Name</th>
+                  <th style="padding:12px 8px;">Email</th>
+                  <th style="padding:12px 8px;">Phone</th>
+                  <th style="padding:12px 8px;">Signup Date</th>
+                  <th style="padding:12px 8px; text-align:center;">Total Logins</th>
+                  <th style="padding:12px 8px;">Last Active</th>
+                </tr>
+              </thead>
+              <tbody id="adminUserRows">
+                <!-- populated dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </div>
       </section>
 
       <!-- SUBSCRIPTION -->
