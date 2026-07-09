@@ -516,6 +516,7 @@ function _getSub() {
 
 function initTrial() {
   const sub = _getSub();
+  if (sub.status === 'active') return;
   if (!sub.trialStartedAt) {
     state.settings.subscription = {
       plan: 'trial',
