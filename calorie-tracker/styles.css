@@ -1341,22 +1341,3 @@ input[type=number]::-webkit-inner-spin-button { opacity:0.5; }
   .btn-sm { padding:10px 16px; }
 }
 
-/* Admin Dashboard Table Styles */
-.admin-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 10px;
-}
-.admin-table th {
-  font-weight: 600;
-  border-bottom: 2px solid var(--c-border-hot);
-}
-.admin-table td {
-  padding: 12px 8px;
-  border-bottom: 1px solid var(--card-border);
-  color: var(--text);
-  vertical-align: middle;
-}
-.admin-table tr:hover {
-  background: var(--c-accent-dim) !important;
-}
