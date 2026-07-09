@@ -84,12 +84,13 @@ const DB = (() => {
     return list.sort((a, b) => a.createdAt - b.createdAt);
   }
 
-  async function createProfile(name, email = '') {
+  async function createProfile(name, email, phone) {
     await open();
     const profile = {
       id:        'p_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
       name:      name.trim() || 'User',
       email:     email.trim(),
+      phone:     phone.trim(),
       avatar:    name.trim().charAt(0).toUpperCase() || 'U',
       createdAt: Date.now(),
     };
