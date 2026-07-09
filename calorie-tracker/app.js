@@ -2765,6 +2765,7 @@ function _registerListeners() {
 }
 
 document.addEventListener('DOMContentLoaded', init);
+// Trigger rebuild with correct Vercel rootDirectory setting
 
 // ============================================================
 // ADMIN PORTAL HELPERS
