@@ -75,6 +75,10 @@ const ImageService = (() => {
 
   // ── Main fetch (tries both, caches winner) ───────────────────
   async function fetchImage(keyword) {
+    const cleanKw = keyword.toLowerCase().trim();
+    if (cleanKw.includes('desi protein bowl')) {
+      return { url: 'assets/desi-protein-bowl.png', small: 'assets/desi-protein-bowl.png', alt: 'Desi Protein Bowl' };
+    }
     const cached = _read(keyword);
     if (cached) return cached;
     let data = null;
