@@ -1,6 +1,18 @@
 const { Client } = require("pg");
+const { verifyToken } = require("./admin-verify");
 
 module.exports = async (req, res) => {
+  // Require admin token for DB initialization
+  if (req.method === "POST") {
+    const { token } = req.body;
+    const payload = verifyToken(token);
+    if (!payload) {
+      return res.status(401).json({ success: false, error: "Unauthorized — admin token required" });
+    }
+  } else if (req.method !== "GET") {
+    return res.status(405).json({ success: false, error: "Method Not Allowed" });
+  }
+
   const client = new Client({
     host: "aws-1-ap-southeast-1.pooler.supabase.com",
     database: "postgres",
@@ -20,8 +32,22 @@ module.exports = async (req, res) => {
         name TEXT NOT NULL,
         email TEXT NOT NULL,
         phone TEXT,
+        subscription_plan TEXT DEFAULT 'trial',
         created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
       );
+    `);
+
+    // Add subscription_plan column if it doesn't exist (migration for existing tables)
+    await client.query(`
+      DO $$
+      BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.columns 
+          WHERE table_schema = 'public' AND table_name = 'profiles' AND column_name = 'subscription_plan'
+        ) THEN
+          ALTER TABLE public.profiles ADD COLUMN subscription_plan TEXT DEFAULT 'trial';
+        END IF;
+      END $$;
     `);
 
     // Create user logins tracking table
@@ -41,8 +67,7 @@ module.exports = async (req, res) => {
       );
     `);
 
-    // Insert default admin user if not exists (username: admin, password: adminPassword123!)
-    // Using simple SHA-256 or plain text for easy setup, let's use plain text or standard hash
+    // Insert default admin user if not exists
     await client.query(`
       INSERT INTO public.admins (username, password_hash)
       VALUES ('admin', 'adminPassword123!')
