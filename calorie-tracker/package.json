@@ -2,5 +2,9 @@
   "name": "nutriflow",
   "version": "1.0.0",
   "private": true,
-  "description": "NutriFlow — Calorie & Nutrition Tracker"
+  "description": "NutriFlow — Calorie & Nutrition Tracker",
+  "dependencies": {
+    "nodemailer": "^6.9.12",
+    "pg": "^8.11.3"
+  }
 }
