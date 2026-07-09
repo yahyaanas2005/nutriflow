@@ -12,7 +12,7 @@ const DEFAULT_STATE = () => ({
   totalXP: 0,
   streak: 0,
   lastLogDate: null,
-  settings: { name:'', email:'', dark:true, animations:true, sound:false, mealReminder:true, waterReminder:true, weeklyReport:true, smtpHost:'', smtpPort:'', smtpUser:'', smtpPass:'', smtpSender:'', subscription: { plan:'trial', status:'trialing', trialStartedAt:null, currentPeriodEnd:null, txnId:null } },
+  settings: { name:'', email:'', dark:true, animations:true, sound:false, mealReminder:true, waterReminder:true, weeklyReport:true, subscription: { plan:'trial', status:'trialing', trialStartedAt:null, currentPeriodEnd:null, txnId:null } },
   fasting: { active:false, startTime:null, hours:16, history:[] },
   measurements: [],
   currentPage: 'dashboard',
@@ -282,7 +282,7 @@ function navigate(page) {
     n.setAttribute('aria-current', isActive ? 'page' : 'false');
   });
   document.querySelectorAll('.page').forEach(p => { p.classList.remove('active'); if (p.id === `page-${page}`) p.classList.add('active'); });
-  const titles = { dashboard:'Dashboard', foodlog:'Food Log', recipes:'Recipes', exercise:'Exercise', progress:'Progress', fasting:'Fasting', achievements:'Achievements', insights:'AI Insights', goals:'Goals', settings:'Settings', subscription:'Plans & Billing', admin:'Admin Portal' };
+  const titles = { dashboard:'Dashboard', foodlog:'Food Log', recipes:'Recipes', exercise:'Exercise', progress:'Progress', fasting:'Fasting', achievements:'Achievements', insights:'AI Insights', goals:'Goals', settings:'Settings', subscription:'Plans & Billing' };
   document.getElementById('pageTitle').textContent = titles[page] || page;
   state.currentPage = page;
   if (page === 'dashboard') renderDashboard();
@@ -295,7 +295,6 @@ function navigate(page) {
   if (page === 'goals') loadGoalForm();
   if (page === 'settings') loadSettings();
   if (page === 'subscription') renderSubscription();
-  if (page === 'admin') loadAdminPortal();
   if (window.innerWidth < 900) {
     document.getElementById('sidebar').classList.remove('open');
     document.getElementById('sidebarOverlay').classList.remove('visible');
@@ -1595,20 +1594,7 @@ function loadSettings() {
     weeklyReportEl.classList.toggle('active', !!state.settings.weeklyReport);
     weeklyReportEl.setAttribute('aria-checked', state.settings.weeklyReport ? 'true' : 'false');
   }
-  document.getElementById('sSmtpHost').value = state.settings.smtpHost || '';
-  document.getElementById('sSmtpPort').value = state.settings.smtpPort || '';
-  document.getElementById('sSmtpUser').value = state.settings.smtpUser || '';
-  document.getElementById('sSmtpPass').value = state.settings.smtpPass || '';
-  document.getElementById('sSmtpSender').value = state.settings.smtpSender || '';
 
-  // Admin visibility control for SMTP Settings
-  const smtpCard = document.getElementById('smtpSettingsCard');
-  if (smtpCard) {
-    const name = (state.settings.name || '').toLowerCase();
-    const email = (state.settings.email || '').toLowerCase();
-    const isAdmin = name.includes('admin') || name === 'yahya' || name.startsWith('yahya') || email === 'nutritionflowai@gmail.com';
-    smtpCard.style.display = isAdmin ? 'block' : 'none';
-  }
 }
 function saveSettings() {
   const name  = document.getElementById('sName').value.trim();
@@ -1617,22 +1603,8 @@ function saveSettings() {
   if (!v.ok) { showToast(v.error, 'error'); return; }
   state.settings.name  = name;
   state.settings.email = email;
-  state.settings.smtpHost = document.getElementById('sSmtpHost').value.trim();
-  state.settings.smtpPort = document.getElementById('sSmtpPort').value.trim();
-  state.settings.smtpUser = document.getElementById('sSmtpUser').value.trim();
-  state.settings.smtpPass = document.getElementById('sSmtpPass').value.trim();
-  state.settings.smtpSender = document.getElementById('sSmtpSender').value.trim();
   document.getElementById('sidebarName').textContent = name;
   document.getElementById('sidebarAvatar').textContent = name.charAt(0).toUpperCase();
-
-  // Update admin visibility control immediately on save
-  const smtpCard = document.getElementById('smtpSettingsCard');
-  if (smtpCard) {
-    const nameLower = name.toLowerCase();
-    const emailLower = email.toLowerCase();
-    const isAdmin = nameLower.includes('admin') || nameLower === 'yahya' || nameLower.startsWith('yahya') || emailLower === 'nutritionflowai@gmail.com';
-    smtpCard.style.display = isAdmin ? 'block' : 'none';
-  }
 
   // Sync the profile record in IDB so the picker shows updated name
   if (currentProfileId) {
@@ -1923,19 +1895,12 @@ function showProfilePicker(profiles) {
     form.classList.add('hidden');
 
     // Trigger welcome email dispatch in the background
-    const smtpSettings = {
-      smtpHost: state.settings ? (state.settings.smtpHost || '') : '',
-      smtpPort: state.settings ? (state.settings.smtpPort || '') : '',
-      smtpUser: state.settings ? (state.settings.smtpUser || '') : '',
-      smtpPass: state.settings ? (state.settings.smtpPass || '') : '',
-      smtpSender: state.settings ? (state.settings.smtpSender || '') : ''
-    };
     fetch('/api/send-welcome-email', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ name, email, smtpSettings })
+      body: JSON.stringify({ name, email })
     })
     .then(async r => {
       showToast('📧 Welcome email sent!', 'success');
@@ -2633,76 +2598,7 @@ function _registerListeners() {
   // Fasting page init
   document.getElementById('page-fasting').addEventListener('click', () => {}, { once:true });
 
-  // ADMIN PORTAL CLICK LISTENERS
-  document.getElementById('adminLoginBtn').onclick = async () => {
-    const username = document.getElementById('adminUser').value.trim();
-    const password = document.getElementById('adminPass').value.trim();
-    const errEl = document.getElementById('adminAuthError');
-    errEl.classList.add('hidden');
 
-    if (!username || !password) {
-      errEl.textContent = 'Please fill out all fields.';
-      errEl.classList.remove('hidden');
-      return;
-    }
-
-    try {
-      const res = await fetch('/api/admin-login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password })
-      });
-      const data = await res.json();
-      if (data.success && data.token) {
-        sessionStorage.setItem('adminToken', data.token);
-        loadAdminPortal();
-        showToast('🔓 Authenticated successfully!', 'success');
-      } else {
-        errEl.textContent = data.error || 'Authentication failed.';
-        errEl.classList.remove('hidden');
-      }
-    } catch (e) {
-      errEl.textContent = 'Failed to connect to server.';
-      errEl.classList.remove('hidden');
-    }
-  };
-
-  document.getElementById('adminLogoutBtn').onclick = () => {
-    sessionStorage.removeItem('adminToken');
-    loadAdminPortal();
-    showToast('🔒 Signed out as Admin', 'info');
-  };
-
-  document.getElementById('adminRefreshBtn').onclick = () => {
-    loadAdminData();
-    showToast('🔄 Syncing with Supabase database...', 'info');
-  };
-
-  document.getElementById('adminInitDbBtn').onclick = async () => {
-    if (!confirm('Re-initialize database schema? This will keep existing tables but update structures.')) return;
-    try {
-      const res = await fetch('/api/init-db');
-      const data = await res.json();
-      if (data.success) {
-        showToast('✅ Database initialized successfully!', 'success');
-      } else {
-        showToast('❌ Database init failed: ' + data.error, 'error');
-      }
-    } catch(e) {
-      showToast('❌ Database init connection failed', 'error');
-    }
-  };
-
-  // Register admin navigation link from login page
-  const ppAdminLink = document.getElementById('ppAdminLink');
-  if (ppAdminLink) {
-    ppAdminLink.onclick = () => {
-      document.getElementById('profilePicker').style.display = 'none';
-      document.getElementById('app').style.display = 'flex';
-      setTheme(true); // default to dark theme for admin
-      navigate('admin');
-    };
-  }
 
   renderFastingSchedule();
 }
@@ -2710,89 +2606,10 @@ function _registerListeners() {
 document.addEventListener('DOMContentLoaded', init);
 // Trigger rebuild with correct Vercel rootDirectory setting
 
+
 // ============================================================
-// ADMIN PORTAL HELPERS
+// UTILITY HELPERS
 // ============================================================
-async function loadAdminPortal() {
-  const token = sessionStorage.getItem('adminToken');
-  const authSection = document.getElementById('adminAuthSection');
-  const dashSection = document.getElementById('adminDashboardSection');
-
-  if (token === 'admin_session_active_nutriflow_2026') {
-    authSection.style.display = 'none';
-    dashSection.style.display = 'block';
-    await loadAdminData();
-  } else {
-    authSection.style.display = 'block';
-    dashSection.style.display = 'none';
-    document.getElementById('adminUser').value = '';
-    document.getElementById('adminPass').value = '';
-    document.getElementById('adminAuthError').classList.add('hidden');
-  }
-}
-
-async function loadAdminData() {
-  const token = sessionStorage.getItem('adminToken');
-  const tbody = document.getElementById('adminUserRows');
-  tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:20px; color:var(--text3);">Loading database logs...</td></tr>';
-
-  try {
-    const res = await fetch('/api/admin-users', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token })
-    });
-    const data = await res.json();
-    
-    if (!data.success) {
-      showToast('❌ Failed to load admin database logs: ' + (data.error || 'Unauthorized'), 'error');
-      sessionStorage.removeItem('adminToken');
-      loadAdminPortal();
-      return;
-    }
-
-    const users = data.users || [];
-    document.getElementById('statTotalUsers').textContent = users.length;
-
-    let totalLogins = 0;
-    tbody.innerHTML = '';
-    
-    if (users.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:20px; color:var(--text3);">No registered profiles in database.</td></tr>';
-      document.getElementById('statTotalLogins').textContent = '0';
-      return;
-    }
-
-    users.forEach(u => {
-      const loginCount = parseInt(u.login_count || '0');
-      totalLogins += loginCount;
-      
-      const tr = document.createElement('tr');
-      tr.style.borderBottom = '1px solid var(--card-border)';
-      
-      const createdDate = new Date(u.created_at).toLocaleDateString(undefined, { dateStyle: 'medium' });
-      const lastActive = u.last_login 
-        ? new Date(u.last_login).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })
-        : 'Never';
-
-      tr.innerHTML = `
-        <td style="padding:12px 8px; font-weight:600; color:var(--text);">${escapeHtml(u.name)}</td>
-        <td style="padding:12px 8px; color:var(--text2);">${escapeHtml(u.email)}</td>
-        <td style="padding:12px 8px; color:var(--text2);">${escapeHtml(u.phone || 'N/A')}</td>
-        <td style="padding:12px 8px; color:var(--text3);">${createdDate}</td>
-        <td style="padding:12px 8px; text-align:center; font-weight:700; color:var(--accent);">${loginCount}</td>
-        <td style="padding:12px 8px; color:var(--text2);">${lastActive}</td>
-      `;
-      tbody.appendChild(tr);
-    });
-
-    document.getElementById('statTotalLogins').textContent = totalLogins;
-  } catch (err) {
-    console.error('Error fetching admin data:', err);
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:20px; color:var(--text3);">Failed to connect to database.</td></tr>';
-  }
-}
-
 function escapeHtml(str) {
   if (!str) return '';
   return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
