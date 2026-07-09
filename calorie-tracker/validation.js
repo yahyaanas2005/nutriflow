@@ -130,6 +130,27 @@ const validate = (() => {
   }
 
   // ----------------------------------------------------------
+  // Profile creation (name, email, phone)
+  // ----------------------------------------------------------
+  function createProfile(name, email, phone) {
+    const rName = profileName(name);
+    if (!rName.ok) return rName;
+
+    if (isBlank(email)) return fail('Email is required');
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      return fail('Email address format is invalid');
+    }
+
+    if (isBlank(phone)) return fail('Phone number is required');
+    const cleanPhone = phone.trim().replace(/[\s\-\(\)\+]/g, '');
+    if (!/^\d{7,15}$/.test(cleanPhone)) {
+      return fail('Phone number must be between 7 and 15 digits');
+    }
+
+    return OK;
+  }
+
+  // ----------------------------------------------------------
   // Settings (name + email)
   // ----------------------------------------------------------
   function settings(name, email) {
@@ -149,6 +170,7 @@ const validate = (() => {
     water,
     goals,
     profileName,
+    createProfile,
     settings,
   };
 })();
