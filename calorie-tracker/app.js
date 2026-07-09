@@ -506,43 +506,9 @@ function getLatestWeight() {
 // SUBSCRIPTION & TRIAL
 // ============================================================
 const _PLANS = {
-  pro:     { name:'Pro',     price:'$2.99', pricePKR:850,  period:'/ month', color:'#6C63FF', features:['Unlimited food logging','AI meal suggestions','Exercise & water tracking','Advanced progress charts','Data export (CSV/JSON)','Recipes & meal planning','Streak & achievement system','Priority email support'] },
-  premium: { name:'Premium', price:'$5.99', pricePKR:1700, period:'/ month', color:'#F0A020', features:['Everything in Pro','Up to 5 profiles','Barcode food scanner','Fasting tracker','Early access to new features','Dedicated priority support','Custom macro targets','No advertisements ever'] },
+  pro:     { name:'Pro',     price:'$1.80', pricePKR:500,  period:'/ month', color:'#6C63FF', features:['Unlimited food logging','AI meal suggestions','Exercise & water tracking','Advanced progress charts','Data export (CSV/JSON)','Recipes & meal planning','Streak & achievement system','Priority email support'] },
+  premium: { name:'Premium', price:'$5.40', pricePKR:1500, period:'/ month', color:'#F0A020', features:['Everything in Pro','Up to 5 profiles','Barcode food scanner','Fasting tracker','Early access to new features','Dedicated priority support','Custom macro targets','No advertisements ever'] },
 };
-
-const _SADAPAY = {
-  accountName: 'Yahya Anas',
-  number:      '03174681197',
-  email:       'yahyaanas2005@gmail.com',
-  whatsapp:    '923059992492',
-};
-
-// One-time activation keys — distribute one per verified SadaPay payment
-const _ACTIVATION_CODES = new Set([
-  'NF-K5WV-UDU5-WTSH','NF-7PFV-WGVA-ZNZV','NF-XL7K-MESE-NJ8Q','NF-E939-4977-X6JT',
-  'NF-FP67-T2AA-U2XX','NF-XGUK-WV5A-NPHH','NF-SJUR-VKM4-LMUF','NF-NWRR-543A-HWTE',
-  'NF-4YAR-CVPJ-SJBP','NF-TA78-ENRM-YNEM','NF-XM85-5NNL-VZFG','NF-RTHL-72C4-7JNF',
-  'NF-X9QF-MUKS-M2ZP','NF-CNCM-9CRK-8HXJ','NF-Y8F5-QCGM-GVXY','NF-7WA3-GYFN-CT2A',
-  'NF-MDYV-HYZF-M2SY','NF-5XEG-WBS4-7LYW','NF-7EYL-6W82-DMHD','NF-2H2R-QW78-LBFQ',
-  'NF-T778-X8SS-2GFU','NF-QKMQ-68GQ-WBVG','NF-Q6M9-WJHX-L3H4','NF-49U5-DYQ6-EM3Q',
-  'NF-S4US-GH6P-JDKF','NF-G8YZ-YKR9-KDRT','NF-D4UD-J3D6-QRF9','NF-2M89-BSA4-GMK6',
-  'NF-DMR2-PLYR-H6B2','NF-E6TU-79LN-CJXC','NF-RMVE-R2XM-A6PM','NF-G6YL-LEQC-XY7B',
-  'NF-KNSP-STHB-ZWEP','NF-SWLJ-6VHU-4PSS','NF-W333-MB6V-JKZQ','NF-TJD3-7SSN-RSDF',
-  'NF-BBE7-TMGX-N3TT','NF-Q9Y5-VEV7-7USE','NF-3ZK6-RUFZ-987U','NF-ZR4Q-AG9V-VZW6',
-  'NF-TVNE-AJQS-TYZM','NF-4HPM-5E6L-2WX5','NF-FS8E-5ENZ-AE2V','NF-SBYD-VRBB-CW8R',
-  'NF-E939-2NS3-H4S5','NF-YUC2-J5BE-YC4N','NF-ZA54-4DG9-YRAR','NF-753Z-CK9W-6ZDP',
-  'NF-K5WA-WJ5K-F56P','NF-HDLE-YV2Y-BSET','NF-Y57Y-F2N4-9X6N','NF-LJD9-6FYG-L4HM',
-  'NF-9KW8-V2NP-4QJE','NF-E3WV-H3ME-2L9V','NF-S6DK-5676-T937','NF-8SSC-J7PK-HQ8F',
-  'NF-APE4-T3B8-WM4V','NF-8CA4-G3U8-J45T','NF-ZS6J-5MM7-C5YR','NF-SK7J-SRCT-NQUF',
-]);
-
-function _usedCodes() {
-  try { return new Set(JSON.parse(localStorage.getItem('nf_used_codes') || '[]')); } catch { return new Set(); }
-}
-function _markCodeUsed(code) {
-  const used = _usedCodes(); used.add(code);
-  try { localStorage.setItem('nf_used_codes', JSON.stringify([...used])); } catch {}
-}
 
 function _getSub() {
   return state.settings.subscription || {};
@@ -607,98 +573,40 @@ function updateTrialBadge() {
   }
 }
 
-function _openSadapayModal(plan) {
-  const p = _PLANS[plan];
-  if (!p) return;
-  const modal = document.getElementById('sadapayModal');
-  modal.dataset.plan = plan;
-  document.getElementById('spModalPlanName').textContent = `${p.name} · PKR ${p.pricePKR}/month`;
-  document.getElementById('spModalPlanUSD').textContent  = `≈ ${p.price} USD/month`;
-  document.getElementById('spModalAccName').textContent  = _SADAPAY.accountName;
-  document.getElementById('spModalNumber').textContent   = _SADAPAY.number;
-  document.getElementById('spModalEmail').textContent    = _SADAPAY.email;
-  document.getElementById('spModalEmail').href           = `mailto:${_SADAPAY.email}`;
-  // If already pending for this plan, skip to phase 2
-  const sub = _getSub();
-  if (sub.status === 'pending' && sub.pendingPlan === plan) {
-    _sadapayShowPhase(2, plan, sub.pendingTxnId);
-  } else {
-    document.getElementById('sadapayTxnId').value = '';
-    _sadapayShowPhase(1, plan, null);
+async function _subscribeWithStripe(plan) {
+  const loading = document.getElementById('loadingScreen');
+  if (loading) {
+    loading.classList.remove('hide');
+    loading.style.display = 'flex';
+    const bar = document.getElementById('loadingBar');
+    if (bar) bar.style.width = '100%';
   }
-  modal.classList.remove('hidden');
-}
-
-function _sadapayShowPhase(phase, plan, txnId) {
-  const p1 = document.getElementById('sadapayPhase1');
-  const p2 = document.getElementById('sadapayPhase2');
-  if (phase === 1) {
-    p1.classList.remove('hidden'); p2.classList.add('hidden');
-    setTimeout(() => document.getElementById('sadapayTxnId').focus(), 60);
-  } else {
-    p1.classList.add('hidden'); p2.classList.remove('hidden');
-    document.getElementById('spPendingTxn').textContent = txnId || '—';
-    const msg = encodeURIComponent(
-      `Hi Yahya! I paid for NutriFlow ${_PLANS[plan]?.name}.\nSadaPay TXN ID: ${txnId}\nPlease send my activation key.`
-    );
-    document.getElementById('spWhatsappLink').href = `https://wa.me/${_SADAPAY.whatsapp}?text=${msg}`;
-    document.getElementById('sadapayActivationCode').value = '';
-    setTimeout(() => document.getElementById('sadapayActivationCode').focus(), 60);
+  
+  try {
+    const res = await fetch('/api/create-checkout-session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ plan, email: state.settings.email })
+    });
+    const data = await res.json();
+    if (data.success && data.url) {
+      window.location.href = data.url;
+    } else {
+      if (loading) {
+        loading.classList.add('hide');
+        setTimeout(() => { loading.style.display = 'none'; }, 300);
+      }
+      showToast('❌ Failed to start Stripe Checkout: ' + (data.error || 'Unknown error'), 'error');
+      playSound('error');
+    }
+  } catch(e) {
+    if (loading) {
+      loading.classList.add('hide');
+      setTimeout(() => { loading.style.display = 'none'; }, 300);
+    }
+    showToast('❌ Failed to connect to payment server', 'error');
+    playSound('error');
   }
-}
-
-function _submitPaymentProof() {
-  const modal = document.getElementById('sadapayModal');
-  const plan  = modal.dataset.plan;
-  const txnId = document.getElementById('sadapayTxnId').value.trim();
-  if (!txnId || txnId.length < 8) {
-    showToast('Transaction ID must be at least 8 characters', 'error'); playSound('error'); return;
-  }
-  if (!/^[A-Za-z0-9\-]+$/.test(txnId)) {
-    showToast('Transaction ID can only contain letters, numbers, and hyphens', 'error'); playSound('error'); return;
-  }
-  state.settings.subscription = {
-    ...state.settings.subscription,
-    status: 'pending',
-    pendingPlan: plan,
-    pendingTxnId: txnId,
-    pendingAt: new Date().toISOString(),
-  };
-  save();
-  updateTrialBadge();
-  _sadapayShowPhase(2, plan, txnId);
-}
-
-function _activateWithCode() {
-  const modal = document.getElementById('sadapayModal');
-  const code  = document.getElementById('sadapayActivationCode').value.trim().toUpperCase();
-  if (!/^NF-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(code)) {
-    showToast('Invalid format — expected NF-XXXX-XXXX-XXXX', 'error'); playSound('error'); return;
-  }
-  if (_usedCodes().has(code)) {
-    showToast('This activation key has already been used', 'error'); playSound('error'); return;
-  }
-  if (!_ACTIVATION_CODES.has(code)) {
-    showToast('Invalid activation key — contact Yahya on WhatsApp', 'error'); playSound('error'); return;
-  }
-  _markCodeUsed(code);
-  const sub = _getSub();
-  const plan = sub.pendingPlan || modal.dataset.plan || 'pro';
-  const end  = new Date(); end.setDate(end.getDate() + 30);
-  state.settings.subscription = {
-    ...sub,
-    plan,
-    status: 'active',
-    currentPeriodEnd: end.toISOString(),
-    activationCode: code,
-    activatedAt: new Date().toISOString(),
-  };
-  save();
-  updateTrialBadge();
-  modal.classList.add('hidden');
-  navigate('subscription');
-  showToast(`🎉 NutriFlow ${_PLANS[plan]?.name} activated! Welcome.`, 'success');
-  playSound('achievement');
 }
 
 function renderSubscription() {
@@ -715,38 +623,17 @@ function renderSubscription() {
         ${_renderPlanCard('premium', sub)}
       </div>
       <div class="sub-guarantee">
-        <span>💚 Pay via SadaPay — instant & secure</span>
+        <span>💳 Pay securely via Stripe</span>
         <span>·</span>
-        <span>Cancel anytime by stopping monthly payment</span>
+        <span>Cancel anytime</span>
         <span>·</span>
         <span>7-day free trial before payment required</span>
       </div>
     </div>`;
 
   page.querySelectorAll('.sub-cta-btn').forEach(btn => {
-    btn.addEventListener('click', () => _openSadapayModal(btn.dataset.plan));
+    btn.addEventListener('click', () => _subscribeWithStripe(btn.dataset.plan));
   });
-
-  // Inline activation on pending status card
-  const subActBtn = page.querySelector('#subPageActivateBtn');
-  if (subActBtn) {
-    const inlineActivate = () => {
-      const code = document.getElementById('subPageActivationCode').value.trim().toUpperCase();
-      if (!/^NF-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(code)) {
-        showToast('Invalid format — expected NF-XXXX-XXXX-XXXX', 'error'); playSound('error'); return;
-      }
-      if (_usedCodes().has(code)) { showToast('Activation key already used', 'error'); playSound('error'); return; }
-      if (!_ACTIVATION_CODES.has(code)) { showToast('Invalid activation key — contact Yahya on WhatsApp', 'error'); playSound('error'); return; }
-      _markCodeUsed(code);
-      const plan = sub.pendingPlan || 'pro';
-      const end  = new Date(); end.setDate(end.getDate() + 30);
-      state.settings.subscription = { ...sub, plan, status:'active', currentPeriodEnd:end.toISOString(), activationCode:code, activatedAt:new Date().toISOString() };
-      save(); updateTrialBadge(); renderSubscription();
-      showToast(`🎉 NutriFlow ${_PLANS[plan]?.name} activated! Welcome.`, 'success'); playSound('achievement');
-    };
-    subActBtn.addEventListener('click', inlineActivate);
-    document.getElementById('subPageActivationCode').addEventListener('keydown', (e) => { if (e.key === 'Enter') inlineActivate(); });
-  }
 }
 
 function _renderSubStatus(sub, left) {
@@ -759,23 +646,8 @@ function _renderSubStatus(sub, left) {
       <div class="ssc-icon">✨</div>
       <div class="ssc-body">
         <div class="ssc-title">You're on ${planLabel} — thank you!</div>
-        <div class="ssc-sub">Active until ${end} · renew via SadaPay to continue</div>
+        <div class="ssc-sub">Active until ${end} · Auto-renews monthly</div>
       </div>
-    </div>`;
-  }
-  if (sub.status === 'pending') {
-    const wa = encodeURIComponent(`Hi Yahya! I paid for NutriFlow.\nSadaPay TXN ID: ${sub.pendingTxnId || '—'}\nPlease send my activation key.`);
-    return `<div class="sub-status-card sub-status-trial">
-      <div class="ssc-icon">📋</div>
-      <div class="ssc-body">
-        <div class="ssc-title">Payment submitted — awaiting activation key</div>
-        <div class="ssc-sub">TXN: <strong>${sub.pendingTxnId || '—'}</strong> · Click below to message Yahya on WhatsApp</div>
-      </div>
-      <a class="btn-sm ssc-wa-btn" href="https://wa.me/${_SADAPAY.whatsapp}?text=${wa}" target="_blank">WhatsApp</a>
-    </div>
-    <div class="sub-activate-row">
-      <input class="sp-txn-input sub-act-input" id="subPageActivationCode" placeholder="Enter activation key: NF-XXXX-XXXX-XXXX" autocomplete="off"/>
-      <button class="btn-primary sub-act-btn" id="subPageActivateBtn">Activate</button>
     </div>`;
   }
   if (sub.status === 'trialing' && left > 0) {
@@ -783,7 +655,7 @@ function _renderSubStatus(sub, left) {
       <div class="ssc-icon">⏳</div>
       <div class="ssc-body">
         <div class="ssc-title">${left} day${left !== 1 ? 's' : ''} left in your free trial</div>
-        <div class="ssc-sub">Subscribe via SadaPay to keep all features after trial ends</div>
+        <div class="ssc-sub">Subscribe to keep all features after trial ends</div>
       </div>
     </div>`;
   }
@@ -791,7 +663,7 @@ function _renderSubStatus(sub, left) {
     <div class="ssc-icon">🔒</div>
     <div class="ssc-body">
       <div class="ssc-title">Your free trial has ended</div>
-      <div class="ssc-sub">Subscribe below via SadaPay to continue using NutriFlow</div>
+      <div class="ssc-sub">Subscribe below to continue using NutriFlow</div>
     </div>
   </div>`;
 }
@@ -801,8 +673,7 @@ function _renderPlanCard(planKey, sub) {
   const isCurrent = sub.plan === planKey && sub.status === 'active';
   const isPro     = planKey === 'pro';
   const features  = p.features.map(f => `<li class="sp-feature"><span class="sp-check" aria-hidden="true">✓</span>${f}</li>`).join('');
-  const isPending = sub.status === 'pending' && sub.pendingPlan === planKey;
-  const btnLabel  = isCurrent ? '✓ Current Plan' : isPending ? '📋 Enter Activation Key' : (sub.status === 'trialing' ? 'Subscribe Now' : 'Start Free Trial');
+  const btnLabel  = isCurrent ? '✓ Current Plan' : (sub.status === 'trialing' ? 'Subscribe Now' : 'Start Free Trial');
   return `
     <div class="sub-plan-card ${isPro ? 'sub-plan-popular' : ''} ${isCurrent ? 'sub-plan-current' : ''}">
       ${isPro ? '<div class="sub-popular-badge">Most Popular</div>' : ''}
@@ -2095,6 +1966,84 @@ async function init() {
   // Register event listeners first (synchronous, safe before DB)
   _registerListeners();
 
+  // Handle Stripe redirect / verification
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.get('payment_success') === 'true' && urlParams.get('session_id')) {
+    const sessionId = urlParams.get('session_id');
+    
+    // Clear URL parameters immediately
+    window.history.replaceState({}, document.title, window.location.pathname);
+    
+    // Show loading screen / spinner
+    const loadingScreen = document.getElementById('loadingScreen');
+    if (loadingScreen) {
+      loadingScreen.classList.remove('hide');
+      loadingScreen.style.display = 'flex';
+      const bar = document.getElementById('loadingBar');
+      if (bar) bar.style.width = '100%';
+    }
+    
+    try {
+      const res = await fetch('/api/verify-checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId })
+      });
+      const data = await res.json();
+      
+      if (data.success) {
+        await DB.open().catch(() => {});
+        const profiles = await DB.getProfiles().catch(() => []);
+        const lastId = localStorage.getItem('nutriflow_last_profile') || (profiles[0] && profiles[0].id);
+        
+        if (lastId) {
+          currentProfileId = lastId;
+          const prof = profiles.find(p => p.id === lastId);
+          if (prof) {
+            if (!state.settings.name) state.settings.name = prof.name;
+            if (!state.settings.email) state.settings.email = prof.email;
+          }
+        }
+        
+        state.settings.subscription = {
+          plan: data.plan,
+          status: 'active',
+          currentPeriodEnd: data.currentPeriodEnd,
+          sessionId: sessionId,
+          activatedAt: new Date().toISOString()
+        };
+        save();
+        
+        if (currentProfileId) {
+          await DB.updateProfile(currentProfileId, {
+            subscription: state.settings.subscription
+          }).catch(() => {});
+          
+          fetch('/api/log-user', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              id: currentProfileId,
+              name: state.settings.name,
+              email: state.settings.email,
+              phone: state.settings.phone || ''
+            })
+          }).catch(() => {});
+        }
+        
+        showToast(`🎉 NutriFlow ${data.plan === 'premium' ? 'Premium' : 'Pro'} activated successfully!`, 'success');
+        playSound('achievement');
+      } else {
+        showToast('❌ Payment verification failed: ' + (data.error || 'Payment not paid'), 'error');
+        playSound('error');
+      }
+    } catch (e) {
+      console.error('[Stripe] Verification error:', e);
+      showToast('❌ Error verifying payment session', 'error');
+      playSound('error');
+    }
+  }
+
   // Loading screen
   setTimeout(async () => {
     document.getElementById('loadingScreen').classList.add('hide');
@@ -2125,6 +2074,10 @@ async function init() {
       if (knownProfile) {
         // Fast path: returning user with remembered profile
         await selectProfile(knownProfile.id);
+        // If payment was verified, navigate to subscription page to show the active badge
+        if (urlParams.get('payment_success') === 'true') {
+          navigate('subscription');
+        }
       } else {
         // Show profile picker (first launch or multi-profile)
         showProfilePicker(profiles);
@@ -2274,17 +2227,6 @@ function _registerListeners() {
   // Trial badge → Plans page
   document.getElementById('trialBadge').addEventListener('click', () => navigate('subscription'));
 
-  // SADAPAY PAYMENT MODAL
-  document.getElementById('sadapayModalClose').addEventListener('click', () => document.getElementById('sadapayModal').classList.add('hidden'));
-  document.getElementById('sadapayModal').addEventListener('click', (e) => { if (e.target === e.currentTarget) e.currentTarget.classList.add('hidden'); });
-  document.getElementById('sadapayConfirmBtn').addEventListener('click', _submitPaymentProof);
-  document.getElementById('sadapayTxnId').addEventListener('keydown', (e) => { if (e.key === 'Enter') _submitPaymentProof(); });
-  document.getElementById('sadapayActivateBtn').addEventListener('click', _activateWithCode);
-  document.getElementById('sadapayActivationCode').addEventListener('keydown', (e) => { if (e.key === 'Enter') _activateWithCode(); });
-  document.getElementById('sadapayBackBtn').addEventListener('click', () => {
-    const plan = document.getElementById('sadapayModal').dataset.plan;
-    _sadapayShowPhase(1, plan, null);
-  });
 
   // HAMBURGER
   document.getElementById('hamburger').addEventListener('click', () => {
