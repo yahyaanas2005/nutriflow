@@ -3,7 +3,11 @@
   "version": "1.0.0",
   "private": true,
   "description": "NutriFlow — Calorie & Nutrition Tracker",
+  "scripts": {
+    "start": "node server.js"
+  },
   "dependencies": {
+    "express": "^4.19.2",
     "nodemailer": "^6.9.12",
     "pg": "^8.11.3",
     "stripe": "^14.22.0"
