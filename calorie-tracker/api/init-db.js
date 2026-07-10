@@ -32,12 +32,13 @@ module.exports = async (req, res) => {
         name TEXT NOT NULL,
         email TEXT NOT NULL,
         phone TEXT,
+        password_hash TEXT,
         subscription_plan TEXT DEFAULT 'trial',
         created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
       );
     `);
 
-    // Add subscription_plan column if it doesn't exist (migration for existing tables)
+    // Add columns if they don't exist (migrations)
     await client.query(`
       DO $$
       BEGIN
@@ -46,6 +47,13 @@ module.exports = async (req, res) => {
           WHERE table_schema = 'public' AND table_name = 'profiles' AND column_name = 'subscription_plan'
         ) THEN
           ALTER TABLE public.profiles ADD COLUMN subscription_plan TEXT DEFAULT 'trial';
+        END IF;
+        
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.columns 
+          WHERE table_schema = 'public' AND table_name = 'profiles' AND column_name = 'password_hash'
+        ) THEN
+          ALTER TABLE public.profiles ADD COLUMN password_hash TEXT;
         END IF;
       END $$;
     `);
@@ -56,6 +64,17 @@ module.exports = async (req, res) => {
         id SERIAL PRIMARY KEY,
         profile_id TEXT NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
         login_time TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+      );
+    `);
+
+    // Create OTP codes table
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS public.user_otps (
+        id SERIAL PRIMARY KEY,
+        email TEXT NOT NULL,
+        otp_code TEXT NOT NULL,
+        expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
       );
     `);
 
