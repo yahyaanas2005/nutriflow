@@ -1827,92 +1827,155 @@ function showApp() {
 
 function showProfilePicker(profiles) {
   const picker = document.getElementById('profilePicker');
-  const grid   = document.getElementById('ppGrid');
   picker.style.display = 'flex';
 
-  const renderGrid = (profs) => {
-    grid.innerHTML = profs.length === 0
-      ? '<p class="pp-hint">No profiles yet — create one below.</p>'
-      : profs.map(p => {
-          const isImg = p.avatar && p.avatar.startsWith('data:');
-          const avatarHtml = isImg
-            ? `<img src="${p.avatar}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`
-            : (p.avatar || p.name.charAt(0).toUpperCase());
-          return `<div class="pp-card" data-id="${p.id}">
-            <div class="pp-avatar">${avatarHtml}</div>
-            <div class="pp-name">${esc(p.name)}</div>
-            <button class="pp-del-btn" data-id="${p.id}" title="Delete profile">✕</button>
-          </div>`;
-        }).join('');
+  const loginSection = document.getElementById('loginFormSection');
+  const otpSection = document.getElementById('otpSection');
+  const errEl = document.getElementById('ppError');
 
-    grid.querySelectorAll('.pp-card').forEach(card => {
-      card.addEventListener('click', (e) => {
-        if (e.target.classList.contains('pp-del-btn')) return;
-        selectProfile(card.dataset.id);
+  // Hide OTP section, show login section by default
+  loginSection.classList.remove('hidden');
+  otpSection.classList.add('hidden');
+  errEl.classList.add('hidden');
+
+  // Wire up Login Submit
+  document.getElementById('loginSubmitBtn').onclick = async () => {
+    const email = document.getElementById('loginEmail').value.trim();
+    const password = document.getElementById('loginPassword').value;
+
+    if (!email || !password) {
+      showPPError("Email and password are required");
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
       });
-    });
-    grid.querySelectorAll('.pp-del-btn').forEach(btn => {
-      btn.addEventListener('click', async (e) => {
-        e.stopPropagation();
-        const pid = btn.dataset.id;
-        const prof = profs.find(p => p.id === pid);
-        if (!confirm(`Delete profile "${prof?.name}"? All data will be lost.`)) return;
-        await DB.deleteProfile(pid).catch(() => {});
-        const updated = await DB.getProfiles().catch(() => []);
-        renderGrid(updated);
+      const data = await res.json();
+
+      if (data.success) {
+        // Save the profile locally and select it
+        await DB.saveProfile(data.user);
+        await selectProfile(data.user.id);
+        showToast('👋 Welcome back!', 'success');
+      } else {
+        if (data.error === "Incorrect password") {
+          // Wrong password flow
+          errEl.innerHTML = `Incorrect password. <br/><button id="ppForgotBtn" style="background:none; border:none; color:#6C63FF; text-decoration:underline; font-size:13px; cursor:pointer; margin-top:8px; font-weight:600;">🔑 Forgot Password? Login via email code</button>`;
+          errEl.classList.remove('hidden');
+          
+          document.getElementById('ppForgotBtn').onclick = async () => {
+            errEl.classList.add('hidden');
+            showToast('📩 Sending login code...', 'info');
+            try {
+              const otpRes = await fetch('/api/send-otp', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email })
+              });
+              const otpData = await otpRes.json();
+              if (otpData.success) {
+                showToast('📩 Verification code sent!', 'success');
+                loginSection.classList.add('hidden');
+                otpSection.classList.remove('hidden');
+                document.getElementById('otpInstructions').textContent = `A 6-digit login code has been sent to ${email}`;
+                document.getElementById('otpCodeInput').focus();
+              } else {
+                showPPError(otpData.error || 'Failed to send login code');
+              }
+            } catch (err) {
+              console.error(err);
+              showPPError('Error sending verification code');
+            }
+          };
+        } else {
+          showPPError(data.error || 'Login failed');
+        }
+      }
+    } catch (e) {
+      console.error(e);
+      showPPError('Network error during login');
+    }
+  };
+
+  // Wire up OTP Verify
+  document.getElementById('otpVerifyBtn').onclick = async () => {
+    const email = document.getElementById('loginEmail').value.trim();
+    const otp = document.getElementById('otpCodeInput').value.trim();
+
+    if (!otp || otp.length !== 6) {
+      showPPError("Please enter the 6-digit code");
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, otp })
       });
-    });
+      const data = await res.json();
+
+      if (data.success) {
+        await DB.saveProfile(data.user);
+        await selectProfile(data.user.id);
+        showToast('🔑 Successfully verified!', 'success');
+      } else {
+        showPPError(data.error || 'Invalid verification code');
+      }
+    } catch (e) {
+      console.error(e);
+      showPPError('Network error during verification');
+    }
   };
 
-  renderGrid(profiles);
-
-  // New profile form
-  const form = document.getElementById('ppNewForm');
-  document.getElementById('ppAddBtn').onclick = () => {
-    form.classList.remove('hidden');
-    document.getElementById('ppName').focus();
-  };
-  document.getElementById('ppCancelBtn').onclick = () => {
-    form.classList.add('hidden');
-    document.getElementById('ppName').value = '';
-    document.getElementById('ppEmail').value = '';
-    document.getElementById('ppPhone').value = '';
-  };
-  document.getElementById('ppCreateBtn').onclick = async () => {
-    const name = document.getElementById('ppName').value.trim();
-    const email = document.getElementById('ppEmail').value.trim();
-    const phone = document.getElementById('ppPhone').value.trim();
-    const v = validate.createProfile(name, email, phone);
-    if (!v.ok) { showPPError(v.error); return; }
-    
-    const profile = await DB.createProfile(name, email, phone).catch(e => { showPPError(e.message); return null; });
-    if (!profile) return;
-
-    // Reset inputs
-    document.getElementById('ppName').value = '';
-    document.getElementById('ppEmail').value = '';
-    document.getElementById('ppPhone').value = '';
-    form.classList.add('hidden');
-
-    // Trigger welcome email dispatch in the background
-    fetch('/api/send-welcome-email', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ name, email })
-    })
-    .then(async r => {
-      showToast('📧 Welcome email sent!', 'success');
-    })
-    .catch(err => {
-      console.warn('[NutriFlow] Welcome email failed:', err);
-      showToast('📧 Welcome email sent!', 'success');
-    });
-
-    selectProfile(profile.id);
+  // Wire up OTP Cancel / Back
+  document.getElementById('otpCancelBtn').onclick = () => {
+    loginSection.classList.remove('hidden');
+    otpSection.classList.add('hidden');
+    errEl.classList.add('hidden');
+    document.getElementById('otpCodeInput').value = '';
   };
 }
+
+// Global Google Sign-In Callback
+window.onGoogleSignIn = async (response) => {
+  try {
+    const token = response.credential;
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function(c) {
+        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+    }).join(''));
+    const payload = JSON.parse(jsonPayload);
+    
+    const email = payload.email;
+    const name = payload.name;
+    const avatar = payload.picture;
+    const password = "google_auth_" + payload.sub;
+    
+    const res = await fetch('/api/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password, name })
+    });
+    const data = await res.json();
+    if (data.success) {
+      if (avatar) data.user.avatar = avatar;
+      await DB.saveProfile(data.user);
+      await selectProfile(data.user.id);
+      showToast('👋 Logged in successfully with Google!', 'success');
+    } else {
+      showPPError(data.error || 'Google login failed');
+    }
+  } catch (err) {
+    console.error('Google Sign-In error:', err);
+    showPPError('Google Sign-In error');
+  }
+};
 
 function showPPError(msg) {
   const el = document.getElementById('ppError');
@@ -1929,11 +1992,59 @@ async function init() {
   // Auto-initialize remote Supabase database schema in the background
   fetch('/api/init-db').catch(() => {});
 
-  // Register event listeners first (synchronous, safe before DB)
-  _registerListeners();
+  // Register event listeners first (synchronous, safe before DB).
+  // A missing element must not abort boot and strand the loading screen.
+  try {
+    _registerListeners();
+  } catch (e) {
+    console.error('[NutriFlow] Listener registration failed:', e);
+  }
 
   // Handle Stripe redirect / verification
   const urlParams = new URLSearchParams(window.location.search);
+  
+  // Handle Magic Link (OTP) login redirect
+  if (urlParams.get('otp') && urlParams.get('email')) {
+    const otp = urlParams.get('otp');
+    const email = urlParams.get('email');
+    
+    // Clear URL parameters immediately
+    window.history.replaceState({}, document.title, window.location.pathname);
+    
+    // Show loading spinner
+    const loadingScreen = document.getElementById('loadingScreen');
+    if (loadingScreen) {
+      loadingScreen.classList.remove('hide');
+      loadingScreen.style.display = 'flex';
+      const bar = document.getElementById('loadingBar');
+      if (bar) bar.style.width = '100%';
+    }
+    
+    try {
+      const res = await fetch('/api/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, otp })
+      });
+      const data = await res.json();
+      if (data.success) {
+        await DB.saveProfile(data.user);
+        await selectProfile(data.user.id);
+        showToast('🔑 Logged in successfully via magic link!', 'success');
+      } else {
+        showToast('❌ Magic link login failed: ' + (data.error || 'Invalid code'), 'error');
+        const profiles = await DB.getProfiles().catch(() => []);
+        showProfilePicker(profiles);
+      }
+    } catch (e) {
+      console.error('[Magic Link] Verification error:', e);
+      showToast('❌ Error verifying magic link', 'error');
+      const profiles = await DB.getProfiles().catch(() => []);
+      showProfilePicker(profiles);
+    }
+    return;
+  }
+
   if (urlParams.get('payment_success') === 'true' && urlParams.get('session_id')) {
     const sessionId = urlParams.get('session_id');
     
@@ -2012,6 +2123,7 @@ async function init() {
 
   // Loading screen
   setTimeout(async () => {
+    window.__nfBooted = true; // signals the index.html watchdog that boot succeeded
     document.getElementById('loadingScreen').classList.add('hide');
     setTimeout(async () => {
       document.getElementById('loadingScreen').style.display = 'none';
