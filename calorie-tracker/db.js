@@ -98,6 +98,14 @@ const DB = (() => {
     return profile;
   }
 
+  async function saveProfile(profile) {
+    await open();
+    if (!profile.createdAt) profile.createdAt = Date.now();
+    if (!profile.avatar) profile.avatar = profile.name.charAt(0).toUpperCase();
+    await _put(_store('profiles', 'readwrite'), profile);
+    return profile;
+  }
+
   async function updateProfile(id, changes) {
     await open();
     const existing = await _get(_store('profiles', 'readonly'), id);
@@ -163,6 +171,7 @@ const DB = (() => {
     open,
     getProfiles,
     createProfile,
+    saveProfile,
     updateProfile,
     deleteProfile,
     saveState,
