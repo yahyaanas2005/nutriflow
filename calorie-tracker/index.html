@@ -3,10 +3,11 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>NutriFlow — Smart Calorie Tracker</title>
+  <title>Fuel & Fit — Smart Calorie Tracker</title>
   <link rel="stylesheet" href="theme-blueprint.css" />
   <link rel="stylesheet" href="styles.css" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
 
@@ -24,23 +25,90 @@
   </div>
 </div>
 
-<!-- Profile Picker (shown after loading, before app) -->
+<!-- Boot watchdog: if app.js fails to start (script error, stale cache), offer a way out
+     instead of an infinite splash screen. Inline so it works even if app.js can't parse. -->
+<script>
+(function () {
+  setTimeout(function () {
+    if (window.__nfBooted) return;
+    var screen = document.getElementById('loadingScreen');
+    if (!screen || screen.style.display === 'none' || screen.classList.contains('hide')) return;
+    var content = screen.querySelector('.loading-content') || screen;
+    var box = document.createElement('div');
+    box.style.cssText = 'margin-top:28px;text-align:center;';
+    box.innerHTML =
+      '<div style="color:#FF6680;font-size:14px;margin-bottom:14px;">NutriFlow is taking too long to start. Your cached version may be outdated.</div>' +
+      '<button id="nfWatchdogReload" style="background:#6C63FF;color:#fff;border:none;border-radius:8px;padding:10px 24px;font-size:14px;cursor:pointer;">&#8635; Reload App</button>';
+    content.appendChild(box);
+    document.getElementById('nfWatchdogReload').onclick = function () {
+      if (window.caches && caches.keys) {
+        caches.keys().then(function (keys) { keys.forEach(function (k) { caches.delete(k); }); })
+          .then(function () { location.reload(); });
+      } else {
+        location.reload();
+      }
+    };
+  }, 10000);
+})();
+</script>
+
+<!-- Login / Auth Screen (shown after loading, before app) -->
 <div id="profilePicker" style="display:none">
-  <div class="pp-container" style="position:relative;">
-    <div class="pp-logo"><span>🌊</span> NutriFlow</div>
-    <h2 class="pp-title">Who's tracking today?</h2>
-    <div class="pp-grid" id="ppGrid"></div>
-    <button class="btn-secondary pp-add-btn" id="ppAddBtn">＋ Add Profile</button>
-    <div class="pp-new-form hidden" id="ppNewForm">
-      <input type="text" id="ppName" placeholder="Your name" maxlength="50" autocomplete="name"/>
-      <input type="email" id="ppEmail" placeholder="Email" autocomplete="email"/>
-      <input type="tel" id="ppPhone" placeholder="Phone number" autocomplete="tel"/>
-      <div class="pp-form-btns">
-        <button class="btn-primary" id="ppCreateBtn">Create Profile</button>
-        <button class="btn-text" id="ppCancelBtn">Cancel</button>
+  <div class="pp-container" style="position:relative; max-width: 420px; padding: 40px 30px;">
+    <div class="pp-logo"><span>🌊</span> Fuel & Fit</div>
+    
+    <!-- Unified Login & Signup Form -->
+    <div id="loginFormSection" style="width: 100%;">
+      <h2 class="pp-title" style="margin-bottom: 8px;">Welcome</h2>
+      <p style="font-size: 14px; color: #a09ec0; margin-bottom: 24px; text-align: center;">Enter your details to sign in or register instantly</p>
+      
+      <div style="display: flex; flex-direction: column; gap: 16px; width: 100%;">
+        <input type="email" id="loginEmail" placeholder="Email Address" required style="width:100%; box-sizing:border-box;" autocomplete="email" />
+        <input type="password" id="loginPassword" placeholder="Password" required style="width:100%; box-sizing:border-box;" autocomplete="current-password" />
+        
+        <button class="btn-primary" id="loginSubmitBtn" style="width: 100%; padding: 14px; margin-top: 8px;">Sign In / Sign Up</button>
+      </div>
+
+      <!-- Google Sign-In Button -->
+      <div style="margin: 24px 0 16px 0; display: flex; align-items: center; justify-content: center; gap: 12px; color: #5d5a80;">
+        <span style="height:1px; background:rgba(108,99,255,0.15); flex:1;"></span>
+        <span style="font-size:12px;">OR</span>
+        <span style="height:1px; background:rgba(108,99,255,0.15); flex:1;"></span>
+      </div>
+      
+      <!-- Google Auth Container -->
+      <div style="display: flex; justify-content: center; width: 100%;">
+        <div id="g_id_onload"
+             data-client_id="820759128969-mmnollsk8p6bhhpvf8bq2btirmkqv3bd.apps.googleusercontent.com"
+             data-callback="onGoogleSignIn"
+             data-auto_prompt="false">
+        </div>
+        <div class="g_id_signin"
+             data-type="standard"
+             data-shape="rectangular"
+             data-theme="outline"
+             data-text="signin_with"
+             data-size="large"
+             data-logo_alignment="left"
+             data-width="360">
+        </div>
       </div>
     </div>
-    <p class="pp-error hidden" id="ppError"></p>
+
+    <!-- OTP verification section (hidden by default) -->
+    <div id="otpSection" class="hidden" style="width: 100%;">
+      <h2 class="pp-title">Enter Verification Code</h2>
+      <p style="font-size: 14px; color: #a09ec0; margin-bottom: 24px; text-align: center;" id="otpInstructions">A 6-digit code has been sent to your email.</p>
+      
+      <div style="display: flex; flex-direction: column; gap: 16px; width: 100%;">
+        <input type="text" id="otpCodeInput" placeholder="6-Digit Code" maxlength="6" pattern="[0-9]*" inputmode="numeric" style="width:100%; text-align: center; font-size: 20px; letter-spacing: 4px; box-sizing:border-box;" />
+        
+        <button class="btn-primary" id="otpVerifyBtn" style="width: 100%; padding: 14px;">Verify Code</button>
+        <button class="btn-text" id="otpCancelBtn" style="width: 100%; margin-top: 8px;">Back to Login</button>
+      </div>
+    </div>
+
+    <p class="pp-error hidden" id="ppError" style="color: #FF6680; text-align: center; margin-top: 16px; font-size: 14px;"></p>
   </div>
 </div>
 
